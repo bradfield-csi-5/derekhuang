@@ -7,21 +7,18 @@ begin at position `p` set to the rightmost `n` bits of `y`, leaving the oth
 bits unchanged.
 */
 
-unsigned setbits(unsigned x, int p, int n, int y) {
-  // create mask
+unsigned setbits(unsigned x, unsigned p, unsigned n, unsigned y) {
+  unsigned window = p - n + 1;
+
   unsigned n_mask = (1 << n) - 1;
 
-  // clear n bits starting at p
-  unsigned n_at_p_cleared = ~(n_mask << (p + 1 - n));
+  unsigned x_mask = ~(n_mask << window);
 
-  // clear n bits in x
-  unsigned n_in_x_cleared = x & n_at_p_cleared;
+  unsigned x_cleared = x & x_mask;
 
-  // get n right bits in y and shift to p
-  unsigned n_in_y_at_p = (y & n_mask) << (p + 1 - n);
+  unsigned y_extracted = (y & n_mask) << window;
 
-  // flip n bits in y in x, preserving other bits
-  return n_in_x_cleared | n_in_y_at_p;
+  return x_cleared | y_extracted;
 }
 
 int main(int argc, char **argv) {
