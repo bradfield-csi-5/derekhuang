@@ -22,11 +22,13 @@ unsigned setbits(unsigned x, unsigned p, unsigned n, unsigned y) {
 }
 
 int main(int argc, char **argv) {
-  assert(setbits(245, 7, 4, 106) == 165);
-  assert(setbits(245, 5, 2, 106) == 229);
-  assert(setbits(245, 3, 4, 106) == 250);
-  assert(setbits(245, 4, 2, 106) == 245);
-  assert(setbits(240, 5, 4, 15) == 252);
+  unsigned x = 0b11110101;
+  unsigned y = 0b01101010;
+  assert(setbits(x, 7, 4, y) == 0b10100101);
+  assert(setbits(x, 5, 2, y) == 0b11100101);
+  assert(setbits(x, 3, 4, y) == 0b11111010);
+  assert(setbits(x, 4, 2, y) == x);
+  assert(setbits(0b11110000, 5, 4, 0b00001111) == 0b11111100);
   printf("All Passed!\n");
   return 0;
 }
