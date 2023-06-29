@@ -8,7 +8,9 @@ others unchanged.
 */
 
 unsigned invert(unsigned x, unsigned p, unsigned n) {
-  unsigned x_mask = ((1 << n) - 1) << (p + 1 - n);
+  unsigned window = p + 1 - n;
+  unsigned n_mask = (1 << n) - 1;
+  unsigned x_mask = n_mask << window;
   return x ^ x_mask;
 }
 
@@ -18,6 +20,6 @@ int main(int argc, char **argv) {
   assert(invert(x, 5, 2) == 0b11000101);
   assert(invert(x, 3, 4) == 0b11111010);
   assert(invert(x, 7, 8) == 0b00001010);
-  printf("All Passed!\n");
+  printf("2-7 All Passed!\n");
   return 0;
 }
