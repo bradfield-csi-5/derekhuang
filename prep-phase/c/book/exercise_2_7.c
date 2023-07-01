@@ -1,11 +1,11 @@
-#include <assert.h>
-#include <stdio.h>
-
 /*
 Write a function `invert(x, p, n)` that returns `x` with the `n` bits that begin
 at position `p` inverted (i.e., 1 changed into 0 and vice versa), leaving the
 others unchanged.
 */
+
+#include <assert.h>
+#include <stdio.h>
 
 unsigned invert(unsigned x, unsigned p, unsigned n) {
   unsigned window = p + 1 - n;

@@ -1,10 +1,10 @@
-#include <assert.h>
-#include <stdio.h>
-
 /*
 Write a function `rightrot(x, n)` that returns the value of the
 integer `x` rotated to the right by `n` bit positions.
 */
+
+#include <assert.h>
+#include <stdio.h>
 
 unsigned rightrot(unsigned x, unsigned n) {
   // only handle 1 byte for simplicity

@@ -1,23 +1,18 @@
-#include <assert.h>
-#include <stdio.h>
-
 /*
 Write a function `setbits(x, p, n, y)` that returns `x` with the `n` bits that
 begin at position `p` set to the rightmost `n` bits of `y`, leaving the other
 bits unchanged.
 */
 
+#include <assert.h>
+#include <stdio.h>
+
 unsigned setbits(unsigned x, unsigned p, unsigned n, unsigned y) {
   unsigned window = p - n + 1;
-
   unsigned n_mask = (1 << n) - 1;
-
   unsigned x_mask = ~(n_mask << window);
-
   unsigned x_cleared = x & x_mask;
-
   unsigned y_extracted = (y & n_mask) << window;
-
   return x_cleared | y_extracted;
 }
 
