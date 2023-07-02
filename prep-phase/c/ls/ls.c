@@ -1,6 +1,9 @@
 #include <assert.h>
 #include <dirent.h>
+#include <grp.h>
+#include <libgen.h>
 #include <limits.h>
+#include <pwd.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,8 +16,9 @@ bool long_format = false;
 bool human_fmt = false;
 bool multiple_paths = false;
 
-void print_file(char *name, bool recurse);
-void print_permissions(mode_t mode);
+void print_file(char *name, struct stat stbuf);
+void print_mode(mode_t mode);
+void stat_walk(char *name, bool recurse);
 void dirwalk(char *dir);
 
 int main(int argc, char **argv) {
@@ -40,19 +44,23 @@ int main(int argc, char **argv) {
   multiple_paths = argc - optind > 1;
 
   if (argc == 1) {
-    print_file(".", true);
+    stat_walk(".", true);
   } else {
     while (optind < argc) {
       if (multiple_paths) {
         struct stat stbuf;
         if (stat(argv[optind], &stbuf) == -1) {
-          fprintf(stderr, "print_file: can't access %s\n", argv[optind]);
+          fprintf(stderr, "stat_walk: can't access %s\n", argv[optind]);
           return EXIT_FAILURE;
         }
         printf("%s:\n", argv[optind]);
       }
-      print_file(argv[optind], true);
-      printf("\n");
+      stat_walk(argv[optind], true);
+      if (long_format) {
+        printf("\n");
+      } else {
+        printf("\n\n");
+      }
       optind++;
     }
   }
@@ -60,11 +68,11 @@ int main(int argc, char **argv) {
   return EXIT_SUCCESS;
 }
 
-void print_file(char *name, bool recurse) {
+void stat_walk(char *name, bool recurse) {
   struct stat stbuf;
 
   if (stat(name, &stbuf) == -1) {
-    fprintf(stderr, "print_file: can't access %s\n", name);
+    fprintf(stderr, "stat_walk: can't access %s\n", name);
     return;
   }
 
@@ -72,16 +80,56 @@ void print_file(char *name, bool recurse) {
     if (recurse) {
       dirwalk(name);
     } else {
-      print_permissions(stbuf.st_mode);
-      printf("%10lld %s\n", stbuf.st_size, name);
+      print_file(name, stbuf);
     }
   } else {
-    print_permissions(stbuf.st_mode);
-    printf("%10lld %s\n", stbuf.st_size, name);
+    print_file(name, stbuf);
   }
 }
 
-void print_permissions(mode_t mode) {
+void dirwalk(char *dir) {
+  struct dirent *dp;
+  DIR *dfd;
+  char name[PATH_MAX];
+
+  if ((dfd = opendir(dir)) == NULL) {
+    fprintf(stderr, "dirwalk: can't open %s\n", dir);
+    return;
+  }
+
+  while ((dp = readdir(dfd)) != NULL) {
+    if (strcmp(dp->d_name, ".") == 0 || strcmp(dp->d_name, "..") == 0) {
+      continue;
+    }
+    if (strlen(dir) + strlen(dp->d_name) + 2 > sizeof(name)) {
+      fprintf(stderr, "dirwalk: name %s/%s too long\n", dir, dp->d_name);
+    } else {
+      snprintf(name, PATH_MAX, "%s/%s", dir, dp->d_name);
+      stat_walk(name, false);
+    }
+  }
+}
+
+void print_file(char *name, struct stat stbuf) {
+  struct passwd *oi = getpwuid(stbuf.st_uid);
+  struct group *gi = getgrgid(stbuf.st_gid);
+  char *bn = basename(strdup(name));
+  if (!show_hidden && bn[0] == '.') {
+    return;
+  }
+  if (long_format) {
+    print_mode(stbuf.st_mode);
+    printf(" %4u", stbuf.st_nlink);
+    printf(" %s", oi->pw_name);
+    printf(" %s", gi->gr_name);
+    printf(" %10lld", stbuf.st_size);
+    printf(" %s\n", name);
+  } else {
+    printf("%s\t", bn);
+  }
+}
+
+void print_mode(mode_t mode) {
   printf(S_ISDIR(mode) ? "d" : "-");
 
   // owner
@@ -98,20 +146,4 @@ void print_permissions(mode_t mode) {
   printf((mode & S_IROTH) ? "r" : "-");
   printf((mode & S_IWOTH) ? "w" : "-");
   printf((mode & S_IXOTH) ? "x" : "-");
-}
-
-void dirwalk(char *dir) {
-  struct dirent *dp;
-  DIR *dfd;
-  char name[PATH_MAX];
-
-  if ((dfd = opendir(dir)) == NULL) {
-    fprintf(stderr, "dirwalk: can't open %s\n", dir);
-    return;
-  }
-
-  while ((dp = readdir(dfd)) != NULL) {
-    snprintf(name, PATH_MAX, "%s/%s", dir, dp->d_name);
-    print_file(name, false);
-  }
 }
