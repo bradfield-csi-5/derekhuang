@@ -8,16 +8,17 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+bool show_hidden = false;
+bool long_format = false;
+bool human_fmt = false;
+bool multiple_paths = false;
+
 void print_file(char *name, bool recurse);
 void print_permissions(mode_t mode);
-void traverse(char *dir);
+void dirwalk(char *dir);
 
 int main(int argc, char **argv) {
   int opt;
-  bool show_hidden = false;
-  bool long_format = false;
-  bool human_fmt = false;
-  bool multiple_paths = false;
 
   while ((opt = getopt(argc, argv, "Ahl")) != -1) {
     switch (opt) {
@@ -42,7 +43,16 @@ int main(int argc, char **argv) {
     print_file(".", true);
   } else {
     while (optind < argc) {
+      if (multiple_paths) {
+        struct stat stbuf;
+        if (stat(argv[optind], &stbuf) == -1) {
+          fprintf(stderr, "print_file: can't access %s\n", argv[optind]);
+          return EXIT_FAILURE;
+        }
+        printf("%s:\n", argv[optind]);
+      }
       print_file(argv[optind], true);
+      printf("\n");
       optind++;
     }
   }
@@ -60,7 +70,7 @@ void print_file(char *name, bool recurse) {
 
   if (S_ISDIR(stbuf.st_mode)) {
     if (recurse) {
-      traverse(name);
+      dirwalk(name);
     } else {
       print_permissions(stbuf.st_mode);
       printf("%10lld %s\n", stbuf.st_size, name);
@@ -90,13 +100,13 @@ void print_permissions(mode_t mode) {
   printf((mode & S_IXOTH) ? "x" : "-");
 }
 
-void traverse(char *dir) {
+void dirwalk(char *dir) {
   struct dirent *dp;
   DIR *dfd;
   char name[PATH_MAX];
 
   if ((dfd = opendir(dir)) == NULL) {
-    fprintf(stderr, "traverse: can't open %s\n", dir);
+    fprintf(stderr, "dirwalk: can't open %s\n", dir);
     return;
   }
 
