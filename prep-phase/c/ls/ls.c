@@ -1,10 +1,9 @@
 #include <assert.h>
+#include <dirent.h>
 #include <limits.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <sys/stat.h>
-
-#include "dirent.h"
 
 void print_file(char *name, bool recurse);
 void print_permissions(mode_t mode);
