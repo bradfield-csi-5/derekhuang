@@ -3,21 +3,51 @@
 #include <limits.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 void print_file(char *name, bool recurse);
 void print_permissions(mode_t mode);
 void traverse(char *dir);
 
 int main(int argc, char **argv) {
+  int opt;
+  bool show_hidden = false;
+  bool long_format = false;
+  bool human_fmt = false;
+  bool multiple_paths = false;
+
+  while ((opt = getopt(argc, argv, "Ahl")) != -1) {
+    switch (opt) {
+      case 'l':
+        long_format = true;
+        break;
+      case 'A':
+        show_hidden = true;
+        break;
+      case 'h':
+        human_fmt = true;
+        break;
+      default:
+        fprintf(stderr, "Usage: %s [-Ahl] [file...]\n", *argv);
+        exit(EXIT_FAILURE);
+    }
+  }
+
+  multiple_paths = argc - optind > 1;
+
   if (argc == 1) {
     print_file(".", true);
   } else {
-    while (--argc > 0) {
-      print_file(*++argv, true);
+    while (optind < argc) {
+      print_file(argv[optind], true);
+      optind++;
     }
   }
-  return 0;
+
+  return EXIT_SUCCESS;
 }
 
 void print_file(char *name, bool recurse) {
@@ -42,6 +72,8 @@ void print_file(char *name, bool recurse) {
 }
 
 void print_permissions(mode_t mode) {
+  printf(S_ISDIR(mode) ? "d" : "-");
+
   // owner
   printf((mode & S_IRUSR) ? "r" : "-");
   printf((mode & S_IWUSR) ? "w" : "-");
