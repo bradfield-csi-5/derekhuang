@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <time.h>
 #include <unistd.h>
 
 bool show_hidden = false;
@@ -111,19 +112,25 @@ void dirwalk(char *dir) {
 }
 
 void print_file(char *name, struct stat stbuf) {
-  struct passwd *oi = getpwuid(stbuf.st_uid);
-  struct group *gi = getgrgid(stbuf.st_gid);
   char *bn = basename(strdup(name));
   if (!show_hidden && bn[0] == '.') {
     return;
   }
   if (long_format) {
+    struct passwd *oi = getpwuid(stbuf.st_uid);
+    struct group *gi = getgrgid(stbuf.st_gid);
+    struct tm *ti = localtime(&stbuf.st_mtimespec.tv_sec);
     print_mode(stbuf.st_mode);
     printf(" %4u", stbuf.st_nlink);
     printf(" %s", oi->pw_name);
     printf(" %s", gi->gr_name);
     printf(" %10lld", stbuf.st_size);
-    printf(" %s\n", name);
+    if (ti != NULL) {
+      char tibuf[15];
+      strftime(tibuf, sizeof(tibuf), "%b %d %H:%M", ti);
+      printf(" %s", tibuf);
+    }
+    printf(" %s\n", bn);
   } else {
     printf("%s\t", bn);
   }
