@@ -14,9 +14,10 @@
 
 bool show_hidden = false;
 bool long_format = false;
-bool human_fmt = false;
+bool human_readable = false;
 bool multiple_paths = false;
 
+char *get_human_readable(off_t bytes);
 void print_file(char *name, struct stat stbuf);
 void print_mode(mode_t mode);
 void stat_walk(char *name, bool recurse);
@@ -34,7 +35,7 @@ int main(int argc, char **argv) {
         show_hidden = true;
         break;
       case 'h':
-        human_fmt = true;
+        human_readable = true;
         break;
       default:
         fprintf(stderr, "Usage: %s [-Ahl] [file...]\n", *argv);
@@ -111,6 +112,18 @@ void dirwalk(char *dir) {
   }
 }
 
+char *get_human_readable(off_t bytes) {
+  int si = 0;
+  char suffixes[] = {'B', 'K', 'M', 'G', 'T', 'P'};
+  char *res;
+  while (bytes > 1024) {
+    bytes /= 1024;
+    si++;
+  }
+  asprintf(&res, "%5.1lld%c", bytes, suffixes[si]);
+  return res;
+}
+
 void print_file(char *name, struct stat stbuf) {
   char *bn = basename(strdup(name));
   if (!show_hidden && bn[0] == '.') {
@@ -124,7 +137,11 @@ void print_file(char *name, struct stat stbuf) {
     printf(" %4u", stbuf.st_nlink);
     printf(" %s", oi->pw_name);
     printf(" %s", gi->gr_name);
-    printf(" %10lld", stbuf.st_size);
+    if (human_readable) {
+      printf(" %s", get_human_readable(stbuf.st_size));
+    } else {
+      printf(" %8lld", stbuf.st_size);
+    }
     if (ti != NULL) {
       char tibuf[15];
       strftime(tibuf, sizeof(tibuf), "%b %d %H:%M", ti);
