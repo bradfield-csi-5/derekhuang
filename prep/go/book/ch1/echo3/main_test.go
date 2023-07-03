@@ -1,10 +1,5 @@
 /*
 Experiment to measure the difference in running time between our potentially inefficient versions and the one that uses strings.Join.
-
-Couldn't figure out why `go test -bench .` didn't work here but it seems like `go test`
-didn't like the fact that there were multiple packages in this directory (main, benchmark).
-
-To get it to work, I copied this into a separate directory so it was the only file.
 */
 package benchmark
 
