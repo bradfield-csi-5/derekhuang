@@ -46,18 +46,23 @@ int main(int argc, char **argv) {
     while (optind < argc) {
       if (argc - optind > 1) {  // multiple files passed
         struct stat stbuf;
+
         if (stat(argv[optind], &stbuf) == -1) {
           fprintf(stderr, "stat_walk: can't access %s\n", argv[optind]);
           return EXIT_FAILURE;
         }
+
         printf("%s:\n", argv[optind]);
       }
+
       stat_walk(argv[optind], true);
+
       if (long_format) {
         printf("\n");
       } else {
         printf("\n\n");
       }
+
       optind++;
     }
   }
@@ -107,6 +112,7 @@ void dirwalk(char *dir) {
     if (strcmp(dp->d_name, ".") == 0 || strcmp(dp->d_name, "..") == 0) {
       continue;
     }
+
     if (strlen(dir) + strlen(dp->d_name) + 2 > sizeof(name)) {
       fprintf(stderr, "dirwalk: name %s/%s too long\n", dir, dp->d_name);
     } else {
@@ -140,10 +146,12 @@ void print_file(char *name, struct stat stbuf) {
 
   if (is_link) {
     bytes_read = readlink(name, target, sizeof(target) - 1);
+
     if (bytes_read == -1) {
       fprintf(stderr, "print_file: failed to read symlink for %s\n", name);
       return;
     }
+
     target[bytes_read] = '\0';
   }
 
