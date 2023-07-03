@@ -80,11 +80,7 @@ void stat_walk(char *name, bool recurse) {
     return;
   }
 
-  if (S_ISLNK(lstbuf.st_mode)) {
-    sbuf = lstbuf;
-  } else {
-    sbuf = stbuf;
-  }
+  sbuf = S_ISLNK(lstbuf.st_mode) ? lstbuf : stbuf;
 
   if (S_ISDIR(sbuf.st_mode)) {
     if (recurse) {
