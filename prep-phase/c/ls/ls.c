@@ -1,4 +1,3 @@
-#include <assert.h>
 #include <dirent.h>
 #include <grp.h>
 #include <libgen.h>
@@ -12,16 +11,14 @@
 #include <time.h>
 #include <unistd.h>
 
+char *get_human_readable(off_t bytes);
+void print_file(char *name, struct stat stbuf);
+void stat_walk(char *name, bool recurse);
+void dirwalk(char *dir);
+
 bool show_hidden = false;
 bool long_format = false;
 bool human_readable = false;
-bool multiple_paths = false;
-
-char *get_human_readable(off_t bytes);
-void print_file(char *name, struct stat stbuf);
-void print_mode(mode_t mode);
-void stat_walk(char *name, bool recurse);
-void dirwalk(char *dir);
 
 int main(int argc, char **argv) {
   int opt;
@@ -43,13 +40,11 @@ int main(int argc, char **argv) {
     }
   }
 
-  multiple_paths = argc - optind > 1;
-
   if (argc == 1) {
     stat_walk(".", true);
   } else {
     while (optind < argc) {
-      if (multiple_paths) {
+      if (argc - optind > 1) {  // multiple files passed
         struct stat stbuf;
         if (stat(argv[optind], &stbuf) == -1) {
           fprintf(stderr, "stat_walk: can't access %s\n", argv[optind]);
@@ -72,20 +67,33 @@ int main(int argc, char **argv) {
 
 void stat_walk(char *name, bool recurse) {
   struct stat stbuf;
+  struct stat lstbuf;
+  struct stat sbuf;
 
   if (stat(name, &stbuf) == -1) {
-    fprintf(stderr, "stat_walk: can't access %s\n", name);
+    fprintf(stderr, "stat_walk: can't stat %s\n", name);
     return;
   }
 
-  if (S_ISDIR(stbuf.st_mode)) {
+  if (lstat(name, &lstbuf) == -1) {
+    fprintf(stderr, "stat_walk: can't lstat %s\n", name);
+    return;
+  }
+
+  if (S_ISLNK(lstbuf.st_mode)) {
+    sbuf = lstbuf;
+  } else {
+    sbuf = stbuf;
+  }
+
+  if (S_ISDIR(sbuf.st_mode)) {
     if (recurse) {
       dirwalk(name);
     } else {
-      print_file(name, stbuf);
+      print_file(name, sbuf);
     }
   } else {
-    print_file(name, stbuf);
+    print_file(name, sbuf);
   }
 }
 
@@ -125,49 +133,77 @@ char *get_human_readable(off_t bytes) {
 }
 
 void print_file(char *name, struct stat stbuf) {
+  bool is_link = S_ISLNK(stbuf.st_mode);
   char *bn = basename(strdup(name));
+  char target[PATH_MAX];
+  ssize_t bytes_read;
+
   if (!show_hidden && bn[0] == '.') {
     return;
   }
+
+  if (is_link) {
+    bytes_read = readlink(name, target, sizeof(target) - 1);
+    if (bytes_read == -1) {
+      fprintf(stderr, "print_file: failed to read symlink for %s\n", name);
+      return;
+    }
+    target[bytes_read] = '\0';
+  }
+
   if (long_format) {
     struct passwd *oi = getpwuid(stbuf.st_uid);
     struct group *gi = getgrgid(stbuf.st_gid);
     struct tm *ti = localtime(&stbuf.st_mtimespec.tv_sec);
-    print_mode(stbuf.st_mode);
+
+    // file mode
+    printf(S_ISDIR(stbuf.st_mode) ? "d" : "-");
+
+    // owner
+    printf((stbuf.st_mode & S_IRUSR) ? "r" : "-");
+    printf((stbuf.st_mode & S_IWUSR) ? "w" : "-");
+    printf((stbuf.st_mode & S_IXUSR) ? "x" : "-");
+
+    // group
+    printf((stbuf.st_mode & S_IRGRP) ? "r" : "-");
+    printf((stbuf.st_mode & S_IWGRP) ? "w" : "-");
+    printf((stbuf.st_mode & S_IXGRP) ? "x" : "-");
+
+    // others
+    printf((stbuf.st_mode & S_IROTH) ? "r" : "-");
+    printf((stbuf.st_mode & S_IWOTH) ? "w" : "-");
+    printf((stbuf.st_mode & S_IXOTH) ? "x" : "-");
+
+    // hard links
     printf(" %4u", stbuf.st_nlink);
+
+    // owner name
     printf(" %s", oi->pw_name);
+
+    // group name
     printf(" %s", gi->gr_name);
+
+    // size in bytes
     if (human_readable) {
       printf(" %s", get_human_readable(stbuf.st_size));
     } else {
       printf(" %8lld", stbuf.st_size);
     }
+
+    // last updated
     if (ti != NULL) {
       char tibuf[15];
       strftime(tibuf, sizeof(tibuf), "%b %d %H:%M", ti);
       printf(" %s", tibuf);
     }
-    printf(" %s\n", bn);
+
+    if (is_link) {
+      printf(" %s ->", bn);
+      printf(" %s\n", target);
+    } else {
+      printf(" %s\n", bn);
+    }
   } else {
     printf("%s\t", bn);
   }
-}
-
-void print_mode(mode_t mode) {
-  printf(S_ISDIR(mode) ? "d" : "-");
-
-  // owner
-  printf((mode & S_IRUSR) ? "r" : "-");
-  printf((mode & S_IWUSR) ? "w" : "-");
-  printf((mode & S_IXUSR) ? "x" : "-");
-
-  // group
-  printf((mode & S_IRGRP) ? "r" : "-");
-  printf((mode & S_IWGRP) ? "w" : "-");
-  printf((mode & S_IXGRP) ? "x" : "-");
-
-  // others
-  printf((mode & S_IROTH) ? "r" : "-");
-  printf((mode & S_IWOTH) ? "w" : "-");
-  printf((mode & S_IXOTH) ? "x" : "-");
 }
