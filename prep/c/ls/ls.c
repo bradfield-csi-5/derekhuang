@@ -22,6 +22,7 @@ bool human_readable = false;
 
 int main(int argc, char **argv) {
   int opt;
+  bool multiple_files;
 
   while ((opt = getopt(argc, argv, "Ahl")) != -1) {
     switch (opt) {
@@ -40,18 +41,14 @@ int main(int argc, char **argv) {
     }
   }
 
+  multiple_files = argc - optind > 1;
+
   if (argc == 1) {
     stat_walk(".", true);
   } else {
     while (optind < argc) {
-      if (argc - optind > 1) {  // multiple files passed
-        struct stat stbuf;
-
-        if (stat(argv[optind], &stbuf) == -1) {
-          fprintf(stderr, "stat_walk: can't access %s\n", argv[optind]);
-          return EXIT_FAILURE;
-        }
-
+      // print paths as headers when more than one are passed
+      if (multiple_files) {
         printf("%s:\n", argv[optind]);
       }
 
