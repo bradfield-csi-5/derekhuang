@@ -22,19 +22,19 @@ func PopCount(x uint64) int {
 }
 
 func PopCountLoop(x uint64) int {
-	var res byte = 0
+	var res = 0
 	for i := 0; i < 8; i++ {
-		res += pc[byte(x>>(i*8))]
+		res += int(pc[byte(x>>(i*8))])
 	}
-	return int(res)
+	return res
 }
 
 func PopCountShift(x uint64) int {
-	var res uint64 = 0
+	var res = 0
 	for i := 1; i < 64; i++ {
-		res += ((x >> i) & 1)
+		res += int((x >> i) & 1)
 	}
-	return int(res)
+	return res
 }
 
 func PopCountClearRightBit(x uint64) int {
