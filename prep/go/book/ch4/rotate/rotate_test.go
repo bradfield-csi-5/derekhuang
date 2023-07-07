@@ -13,7 +13,7 @@ var tests = []struct {
 	{[]int{1, 2, 3, 4, 5}, 4, []int{2, 3, 4, 5, 1}},
 	{[]int{1, 2, 3, 4, 5}, 5, []int{1, 2, 3, 4, 5}},
 	{[]int{-1, 2, 3, 4, 5}, 1, []int{5, -1, 2, 3, 4}},
-	// {[]int{1, -1, 3, 4, 5}, 1, []int{5, 1, -1, 3, 4}}, // fails
+	{[]int{1, -1, 3, 4, 5}, 1, []int{5, 1, -1, 3, 4}},
 }
 
 func TestRotate(t *testing.T) {
@@ -22,7 +22,7 @@ func TestRotate(t *testing.T) {
 		copy(cp, tt.in)
 		Rotate(tt.in, tt.r)
 		if !compareSlice(tt.in, tt.out) {
-			t.Errorf("Reverse(%v) == <%v> want <%v>", cp, tt.in, tt.out)
+			t.Errorf("Rotate(%v) == <%v> want <%v>", cp, tt.in, tt.out)
 		}
 	}
 }
