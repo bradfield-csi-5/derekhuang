@@ -23,7 +23,7 @@ func TestRotate(t *testing.T) {
 		copy(cp, tt.in)
 		Rotate(tt.in, tt.r)
 		if !compareSlice(tt.in, tt.out) {
-			t.Errorf("Rotate(%v) == <%v> want <%v>", cp, tt.in, tt.out)
+			t.Errorf("Rotate(%v, %v) == <%v> want <%v>", cp, tt.r, tt.in, tt.out)
 		}
 	}
 }
