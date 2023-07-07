@@ -1,37 +1,22 @@
 package reverse
 
-import (
-	"testing"
-)
+import "testing"
 
 var tests = []struct {
-	in  []int
-	out []int
+	in  [5]int
+	out [5]int
 }{
-	{[]int{1, 2, 3, 4, 5}, []int{5, 4, 3, 2, 1}},
-	{[]int{1, 1, 2, 3, 3}, []int{3, 3, 2, 1, 1}},
-	{[]int{-2, -1, 0, 1, 2}, []int{2, 1, 0, -1, -2}},
+	{[5]int{1, 2, 3, 4, 5}, [5]int{5, 4, 3, 2, 1}},
+	{[5]int{-2, -1, 0, 1, 2}, [5]int{2, 1, 0, -1, -2}},
+	{[5]int{1, 1, 2, 3, 3}, [5]int{3, 3, 2, 1, 1}},
 }
 
 func TestReverse(t *testing.T) {
 	for _, tt := range tests {
-		in := make([]int, len(tt.in))
-		copy(in, tt.in)
-		Reverse(tt.in)
-		if !compSlice(tt.in, tt.out) {
-			t.Errorf("Reverse(%v) == <%v> want <%v>", in, tt.in, tt.out)
+		var cp [5]int = tt.in
+		Reverse(&tt.in)
+		if tt.in != tt.out {
+			t.Errorf("Reverse(%v) == <%v> want <%v>", cp, tt.in, tt.out)
 		}
 	}
-}
-
-func compSlice(s1 []int, s2 []int) bool {
-	if len(s1) != len(s2) {
-		return false
-	}
-	for i := range s1 {
-		if s1[i] != s2[i] {
-			return false
-		}
-	}
-	return true
 }
