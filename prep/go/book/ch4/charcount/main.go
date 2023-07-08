@@ -14,12 +14,12 @@ import (
 )
 
 func main() {
-	counts := make(map[rune]int) // counts of Unicode characters
-	categories := make(map[string]int)
-	var utflen [utf8.UTFMax + 1]int // count of lengths of UTF-8 encodings
-	invalid := 0                    // count of invalid UTF-8 characters
+	counts := make(map[rune]int)       // counts of Unicode characters
+	categories := make(map[string]int) // counts of character categories
+	var utflen [utf8.UTFMax + 1]int    // count of lengths of UTF-8 encodings
+	invalid := 0                       // count of invalid UTF-8 characters
 
-	in := bufio.NewReader(os.Stdin) // TODO: read from file
+	in := bufio.NewReader(os.Stdin)
 	for {
 		r, n, err := in.ReadRune() // returns rune, nbytes, error
 		if err == io.EOF {
