@@ -101,7 +101,7 @@ func PopulateIndex(logger *log.Logger) {
 	}
 
 	// No need to encode and write if the index is full
-	if skipped != max {
+	if skipped < max {
 		logger.Println("Encoding json...")
 		b, err := json.MarshalIndent(index, "", "  ")
 		if err != nil {
