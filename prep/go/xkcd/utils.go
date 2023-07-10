@@ -56,6 +56,10 @@ func PopulateIndex(logger *log.Logger) {
 	}
 
 	for i := 1; i <= max; i++ {
+		if i == 404 { // 404 Not Found
+			skipped++
+			continue
+		}
 		if _, ok := index[i]; ok {
 			logger.Printf("Comic #%d found in index. Skipping...\n", i)
 			skipped++
@@ -97,7 +101,7 @@ func PopulateIndex(logger *log.Logger) {
 	}
 
 	// No need to encode and write if the index is full
-	if skipped != max-1 { // #404 doesn't exist
+	if skipped != max {
 		logger.Println("Encoding json...")
 		b, err := json.MarshalIndent(index, "", "  ")
 		if err != nil {
