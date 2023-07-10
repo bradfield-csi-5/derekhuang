@@ -4,6 +4,12 @@ Exercise 4.12: The popular web comic xkcd has a JSON interface. For example, a r
 
 package main
 
+import (
+	"log"
+	"os"
+)
+
 func main() {
-	PopulateIndex()
+	logger := log.New(os.Stdout, "[xkcd] ", log.LstdFlags|log.Lshortfile|log.Lmsgprefix)
+	PopulateIndex(logger)
 }
