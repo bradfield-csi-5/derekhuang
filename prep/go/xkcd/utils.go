@@ -7,11 +7,12 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 )
 
 const (
 	fileName = "xkcd.json"
-	max      = 2799 // TODO: change to 2799
+	max      = 2799
 	xkcdUrl  = "https://xkcd.com"
 )
 
@@ -29,8 +30,13 @@ type Comic struct {
 	Day        string
 }
 
+type Index map[int]Record
+
+type Record map[string]string
+
 func PopulateIndex(logger *log.Logger) {
-	var record map[int]map[string]string
+	var index Index
+	var skipped uint = 0
 
 	file, err := os.OpenFile(fileName, os.O_APPEND, 0666)
 	if err != nil {
@@ -41,49 +47,68 @@ func PopulateIndex(logger *log.Logger) {
 		}
 	}
 
-	if err := json.NewDecoder(file).Decode(&record); err != nil {
+	if err := json.NewDecoder(file).Decode(&index); err != nil {
 		if err != io.EOF {
 			logger.Fatalln("error decoding json:", err)
 		}
 		// The index was malformed/nonexistent/empty so create a new one
-		record = make(map[int]map[string]string)
+		index = make(Index)
 	}
 
 	for i := 1; i <= max; i++ {
-		if _, ok := record[i]; ok {
+		if _, ok := index[i]; ok {
 			logger.Printf("Comic #%d found in index. Skipping...\n", i)
+			skipped++
 			continue
 		}
 
+		logger.Printf("Fetching #%d...\n", i)
 		resp, err := http.Get(fmt.Sprintf("%s/%d/%s", xkcdUrl, i, "info.0.json"))
 		if err != nil {
-			logger.Fatalln("get error:", err)
+			logger.Fatalf("get error for #%d: %v\n", i, err)
 		}
 
 		if resp.StatusCode != http.StatusOK {
 			resp.Body.Close()
-			logger.Printf("get request failed for comic #%d: %s\n", i, resp.Status)
+			logger.Printf("get request failed for #%d: %s\n", i, resp.Status)
 			continue
 		}
 
 		var result Comic
 		if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 			resp.Body.Close()
-			logger.Fatalln("json decode failed:", err)
+			logger.Fatalf("json decode failed for #%d: %v\n", i, err)
 		}
 
-		record[i] = map[string]string{
+		index[i] = Record{
 			"url":        fmt.Sprintf("%s/%d", xkcdUrl, i),
 			"transcript": fmt.Sprintf("%#v", result.Transcript),
+			"alt":        fmt.Sprintf("%#v", result.Alt),
+			"day":        result.Day,
+			"month":      result.Month,
+			"year":       result.Year,
+			"num":        strconv.Itoa(result.Num),
+			"link":       result.Link,
+			"img":        result.Img,
+			"news":       result.News,
+			"title":      fmt.Sprintf("%#v", result.Title),
+			"safe_title": result.SafeTitle,
 		}
 	}
 
-	b, err := json.MarshalIndent(record, "", "  ")
-	if err != nil {
-		logger.Fatalln("error encoding json:", err)
+	// No need to encode and write if the index is full
+	if skipped != max-1 { // #404 doesn't exist
+		logger.Println("Encoding json...")
+		b, err := json.MarshalIndent(index, "", "  ")
+		if err != nil {
+			logger.Fatalln("error encoding json:", err)
+		}
+
+		logger.Println("Writing to disk...")
+		if err := os.WriteFile(fileName, b, 0666); err != nil {
+			logger.Fatalln("error writing json:", err)
+		}
 	}
 
-	if err := os.WriteFile(fileName, b, 0666); err != nil {
-		logger.Fatalln("error writing json:", err)
-	}
+	logger.Println("Done")
 }
