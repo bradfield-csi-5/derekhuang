@@ -2,17 +2,19 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
+	"sync"
 )
 
 const (
 	fileName = "xkcd.json"
-	max      = 2799
+	max      = 2800
 	xkcdUrl  = "https://xkcd.com"
 )
 
@@ -34,9 +36,15 @@ type Index map[int]Record
 
 type Record map[string]string
 
+type item struct {
+	comic Comic
+	err   error
+}
+
 func PopulateIndex(logger *log.Logger) {
 	var index Index
-	var skipped uint = 0
+	var skipped int = 0
+	var wg sync.WaitGroup
 
 	file, err := os.OpenFile(fileName, os.O_APPEND, 0666)
 	if err != nil {
@@ -55,52 +63,54 @@ func PopulateIndex(logger *log.Logger) {
 		index = make(Index)
 	}
 
+	ch := make(chan item, max)
 	for i := 1; i <= max; i++ {
 		if i == 404 { // 404 Not Found
 			skipped++
 			continue
 		}
 		if _, ok := index[i]; ok {
-			logger.Printf("Comic #%d found in index. Skipping...\n", i)
 			skipped++
 			continue
 		}
 
-		logger.Printf("Fetching #%d...\n", i)
-		resp, err := http.Get(fmt.Sprintf("%s/%d/%s", xkcdUrl, i, "info.0.json"))
-		if err != nil {
-			logger.Fatalf("get error for #%d: %v\n", i, err)
-		}
-
-		if resp.StatusCode != http.StatusOK {
-			resp.Body.Close()
-			logger.Printf("get request failed for #%d: %s\n", i, resp.Status)
-			continue
-		}
-
-		var result Comic
-		if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-			resp.Body.Close()
-			logger.Fatalf("json decode failed for #%d: %v\n", i, err)
-		}
-
-		index[i] = Record{
-			"url":        fmt.Sprintf("%s/%d", xkcdUrl, i),
-			"transcript": fmt.Sprintf("%#v", result.Transcript),
-			"alt":        fmt.Sprintf("%#v", result.Alt),
-			"day":        result.Day,
-			"month":      result.Month,
-			"year":       result.Year,
-			"num":        strconv.Itoa(result.Num),
-			"link":       result.Link,
-			"img":        result.Img,
-			"news":       result.News,
-			"title":      fmt.Sprintf("%#v", result.Title),
-			"safe_title": result.SafeTitle,
-		}
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			var it item
+			it.comic, it.err = fetch(i, logger)
+			if it.err != nil {
+				logger.Printf("error getting #%d\n", it.comic.Num)
+				return
+			}
+			ch <- it
+		}(i)
 	}
 
 	if skipped < max {
+		go func() {
+			wg.Wait()
+			close(ch)
+		}()
+
+		logger.Println("Building index...")
+		for it := range ch {
+			index[it.comic.Num] = Record{
+				"url":        fmt.Sprintf("%s/%d", xkcdUrl, it.comic.Num),
+				"transcript": it.comic.Transcript,
+				"alt":        it.comic.Alt,
+				"day":        it.comic.Day,
+				"month":      it.comic.Month,
+				"year":       it.comic.Year,
+				"num":        strconv.Itoa(it.comic.Num),
+				"link":       it.comic.Link,
+				"img":        it.comic.Img,
+				"news":       it.comic.News,
+				"title":      it.comic.Title,
+				"safe_title": it.comic.SafeTitle,
+			}
+		}
+
 		logger.Println("Encoding json...")
 		b, err := json.MarshalIndent(index, "", "  ")
 		if err != nil {
@@ -114,4 +124,29 @@ func PopulateIndex(logger *log.Logger) {
 	}
 
 	logger.Println("Done")
+}
+
+func fetch(i int, logger *log.Logger) (comic Comic, err error) {
+	logger.Printf("Fetching #%d...\n", i)
+	resp, err := http.Get(fmt.Sprintf("%s/%d/info.0.json", xkcdUrl, i))
+	if err != nil {
+		return Comic{Num: i}, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		logger.Printf("get request failed for #%d: %s\n", i, resp.Status)
+		return Comic{Num: i}, errors.New(resp.Status)
+	}
+
+	var result Comic
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return Comic{Num: i}, err
+	}
+
+	if result.Num == 0 {
+		result.Num = i
+	}
+
+	return result, nil
 }
