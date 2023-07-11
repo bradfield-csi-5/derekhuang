@@ -17,6 +17,5 @@ import (
 
 func main() {
 	logger := log.New(os.Stdout, "[xkcd] ", log.LstdFlags|log.Lshortfile|log.Lmsgprefix)
-	var index = make(Index)
-	PopulateIndex(index, logger)
+	PopulateIndex(logger)
 }

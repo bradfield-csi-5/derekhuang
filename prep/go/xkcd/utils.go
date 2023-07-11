@@ -34,7 +34,8 @@ type Index map[int]Record
 
 type Record map[string]string
 
-func PopulateIndex(index Index, logger *log.Logger) {
+func PopulateIndex(logger *log.Logger) {
+	var index Index
 	var skipped uint = 0
 
 	file, err := os.OpenFile(fileName, os.O_APPEND, 0666)
@@ -47,10 +48,11 @@ func PopulateIndex(index Index, logger *log.Logger) {
 	}
 
 	if err := json.NewDecoder(file).Decode(&index); err != nil {
-		// An EOF error here means the json file was empty which is safe to ignore
 		if err != io.EOF {
 			logger.Fatalln("error decoding json:", err)
 		}
+		// The index was malformed/nonexistent/empty so create a new one
+		index = make(Index)
 	}
 
 	for i := 1; i <= max; i++ {
