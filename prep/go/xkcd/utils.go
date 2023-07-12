@@ -181,13 +181,7 @@ func BuildReverseIndex(logger *log.Logger) {
 	logger.Printf("Normalizing words from index...")
 	rindex := make(ReverseIndex)
 	for i, cmc := range index {
-		normalized := normalize(
-			// Remove ignored words before normalizing
-			ignoreRe.ReplaceAllString(
-				strings.Join([]string{cmc["alt"], cmc["safe_title"], cmc["transcript"]}, " "),
-				"",
-			),
-		)
+		normalized := normalize(cmc["alt"], cmc["safe_title"], cmc["transcript"])
 		for _, word := range normalized {
 			if _, ok := rindex[word]; !ok {
 				rindex[word] = make(IntSet)
@@ -209,20 +203,23 @@ func BuildReverseIndex(logger *log.Logger) {
 	logger.Println("Finished building reverse index.")
 }
 
-func normalize(s string) []string {
+func normalize(strs ...string) []string {
 	var ret []string
-	lower := strings.ToLower(s)
 
-	// Remove everything that isn't a letter or number
-	normalizedWords := strings.FieldsFunc(lower, func(c rune) bool {
-		return !unicode.IsLetter(c) || (c > unicode.MaxASCII)
-		// return !unicode.IsLetter(c) && !unicode.IsNumber(c)
-	})
+	for _, s := range strs {
+		// Remove ignored words and convert to lowercase
+		normalizedStr := ignoreRe.ReplaceAllString(strings.ToLower(s), "")
 
-	// Ignore short words
-	for _, word := range normalizedWords {
-		if len(word) > 2 {
-			ret = append(ret, word)
+		// Remove everything that isn't an ascii letter
+		normalizedWords := strings.FieldsFunc(normalizedStr, func(c rune) bool {
+			return !unicode.IsLetter(c) || (c > unicode.MaxASCII)
+		})
+
+		// Ignore short words
+		for _, word := range normalizedWords {
+			if len(word) > 2 {
+				ret = append(ret, word)
+			}
 		}
 	}
 
