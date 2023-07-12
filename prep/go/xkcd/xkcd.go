@@ -18,4 +18,5 @@ import (
 func main() {
 	logger := log.New(os.Stdout, "[xkcd] ", log.LstdFlags|log.Lshortfile|log.Lmsgprefix)
 	PopulateIndex(logger)
+	BuildReverseIndex(logger)
 }
