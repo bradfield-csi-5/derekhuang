@@ -38,10 +38,10 @@ type Record map[string]string
 type IntSet map[int]bool
 
 const (
-	indexFileName  = "xkcd.json"
-	rindexFileName = "dckx.json"
-	max            = 2800
-	xkcdUrl        = "https://xkcd.com"
+	IndexFileName    = "xkcd.json"
+	RevIndexFileName = "dckx.json"
+	max              = 2800
+	xkcdUrl          = "https://xkcd.com"
 )
 
 var ignoreRe = regexp.MustCompile("Title text:")
@@ -56,10 +56,10 @@ func PopulateIndex(logger *log.Logger) {
 	var skipped int = 0
 	var wg sync.WaitGroup
 
-	file, err := os.OpenFile(indexFileName, os.O_APPEND, 0666)
+	file, err := os.OpenFile(IndexFileName, os.O_APPEND, 0666)
 	if err != nil {
 		logger.Printf("Failed to open file. Creating a new one...\n")
-		file, err = os.Create(indexFileName)
+		file, err = os.Create(IndexFileName)
 		if err != nil {
 			logger.Fatalln("failed to create new file:", err)
 		}
@@ -71,6 +71,12 @@ func PopulateIndex(logger *log.Logger) {
 		}
 		// The index was malformed/nonexistent/empty so create a new one
 		index = make(Index)
+	}
+
+	// Short circuit if the index is fully populated
+	// (compare with 1 less than max to account for #404)
+	if len(index) == max-1 {
+		return
 	}
 
 	logger.Println("Checking for missing comics from index...")
@@ -128,7 +134,7 @@ func PopulateIndex(logger *log.Logger) {
 		}
 
 		logger.Println("Writing index to disk...")
-		if err := os.WriteFile(indexFileName, b, 0666); err != nil {
+		if err := os.WriteFile(IndexFileName, b, 0666); err != nil {
 			logger.Fatalln("error writing json:", err)
 		}
 
@@ -163,11 +169,11 @@ func fetch(i int, logger *log.Logger) (comic Comic, err error) {
 }
 
 func BuildReverseIndex(logger *log.Logger) {
-	if _, err := os.Stat(rindexFileName); err == nil {
+	if _, err := os.Stat(RevIndexFileName); err == nil {
 		return
 	}
 
-	b, err := os.ReadFile(indexFileName)
+	b, err := os.ReadFile(IndexFileName)
 	if err != nil {
 		logger.Fatalln("error reading index:", err)
 	}
@@ -196,7 +202,7 @@ func BuildReverseIndex(logger *log.Logger) {
 	}
 
 	logger.Printf("Writing reverse index to disk...")
-	if err := os.WriteFile(rindexFileName, b, 0666); err != nil {
+	if err := os.WriteFile(RevIndexFileName, b, 0666); err != nil {
 		logger.Fatalln("error writing reverse index:", err)
 	}
 
@@ -224,4 +230,23 @@ func normalize(strs ...string) []string {
 	}
 
 	return ret
+}
+
+func Intersection(s1, s2 IntSet) IntSet {
+	ret := make(IntSet)
+	for k := range s1 {
+		if _, exists := s2[k]; exists {
+			ret[k] = true
+		}
+	}
+	return ret
+}
+
+func Union(s1, s2 IntSet) IntSet {
+	for k := range s2 {
+		if _, exists := s1[k]; !exists {
+			s1[k] = true
+		}
+	}
+	return s1
 }

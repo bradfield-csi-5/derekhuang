@@ -11,12 +11,65 @@ matches a search term provided on the command line.
 package main
 
 import (
+	"encoding/json"
+	"flag"
+	"fmt"
 	"log"
 	"os"
 )
 
-func main() {
-	logger := log.New(os.Stdout, "[xkcd] ", log.LstdFlags|log.Lshortfile|log.Lmsgprefix)
+var logger = log.New(os.Stdout, "[xkcd] ", log.LstdFlags|log.Lshortfile|log.Lmsgprefix)
+var strict = flag.Bool("s", false, "strict search (search terms are ANDed)")
+
+func init() {
 	PopulateIndex(logger)
 	BuildReverseIndex(logger)
+}
+
+func main() {
+	flag.Parse()
+	var index Index
+	b, err := os.ReadFile(IndexFileName)
+	if err != nil {
+		logger.Fatalln("error reading index:", err)
+	}
+	err = json.Unmarshal(b, &index)
+	if err != nil {
+		logger.Fatalln("error unmarshaling index:", err)
+	}
+
+	var rindex ReverseIndex
+	b, err = os.ReadFile(RevIndexFileName)
+	if err != nil {
+		logger.Fatalln("error reading reverse index:", err)
+	}
+	err = json.Unmarshal(b, &rindex)
+	if err != nil {
+		logger.Fatalln("error unmarshaling reverse index:", err)
+	}
+
+	var args = flag.Args()
+	if len(args) == 0 {
+		logger.Fatalln("At least one arg (search term) required.")
+	}
+
+	idSet := rindex[args[0]]
+	for _, arg := range args[1:] {
+		nextSet, ok := rindex[arg]
+		if !ok {
+			continue
+		}
+		if *strict {
+			idSet = Intersection(idSet, nextSet)
+		} else {
+			idSet = Union(idSet, nextSet)
+		}
+	}
+
+	for id := range idSet {
+		fmt.Println("#", id)
+		fmt.Println("======================")
+		fmt.Printf("URL:\n%s\n\n", index[id]["url"])
+		fmt.Printf("Transcript:\n%v\n\n", index[id]["transcript"])
+	}
 }
