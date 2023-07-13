@@ -144,7 +144,6 @@ func PopulateIndex(logger *log.Logger) {
 }
 
 func fetch(i int, logger *log.Logger) (comic Comic, err error) {
-	// logger.Printf("Fetching #%d...\n", i)
 	resp, err := http.Get(fmt.Sprintf("%s/%d/info.0.json", xkcdUrl, i))
 	if err != nil {
 		return Comic{Num: i}, err
