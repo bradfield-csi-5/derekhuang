@@ -58,10 +58,10 @@ func PopulateIndex(logger *log.Logger) {
 
 	file, err := os.OpenFile(IndexFileName, os.O_APPEND, 0666)
 	if err != nil {
-		logger.Printf("Failed to open file. Creating a new one...\n")
+		logger.Printf("Failed to read index. Creating a new one...\n")
 		file, err = os.Create(IndexFileName)
 		if err != nil {
-			logger.Fatalln("failed to create new file:", err)
+			logger.Fatalln("error creating new file:", err)
 		}
 	}
 
@@ -79,7 +79,7 @@ func PopulateIndex(logger *log.Logger) {
 		return
 	}
 
-	logger.Println("Checking for missing comics from index...")
+	logger.Println("Fetching missing comics...")
 	ch := make(chan item, max)
 	for i := 1; i <= max; i++ {
 		if i == 404 { // 404 Not Found
@@ -103,6 +103,7 @@ func PopulateIndex(logger *log.Logger) {
 			ch <- it
 		}(i)
 	}
+	logger.Println("  done")
 
 	if skipped < max {
 		go func() {
@@ -110,7 +111,7 @@ func PopulateIndex(logger *log.Logger) {
 			close(ch)
 		}()
 
-		logger.Println("Building index...")
+		logger.Println("Building index in memory...")
 		for it := range ch {
 			index[it.comic.Num] = Record{
 				"url":        fmt.Sprintf("%s/%d", xkcdUrl, it.comic.Num),
@@ -138,12 +139,12 @@ func PopulateIndex(logger *log.Logger) {
 			logger.Fatalln("error writing json:", err)
 		}
 
-		logger.Println("Finished populating index.")
+		logger.Println("  done")
 	}
 }
 
 func fetch(i int, logger *log.Logger) (comic Comic, err error) {
-	logger.Printf("Fetching #%d...\n", i)
+	// logger.Printf("Fetching #%d...\n", i)
 	resp, err := http.Get(fmt.Sprintf("%s/%d/info.0.json", xkcdUrl, i))
 	if err != nil {
 		return Comic{Num: i}, err
@@ -206,7 +207,7 @@ func BuildReverseIndex(logger *log.Logger) {
 		logger.Fatalln("error writing reverse index:", err)
 	}
 
-	logger.Println("Finished building reverse index.")
+	logger.Println("  done")
 }
 
 func normalize(strs ...string) []string {
