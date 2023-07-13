@@ -73,7 +73,7 @@ func PopulateIndex(logger *log.Logger) {
 		index = make(Index)
 	}
 
-	logger.Println("Looping through comic IDs...")
+	logger.Println("Checking for missing comics from index...")
 	ch := make(chan item, max)
 	for i := 1; i <= max; i++ {
 		if i == 404 { // 404 Not Found
@@ -163,7 +163,7 @@ func fetch(i int, logger *log.Logger) (comic Comic, err error) {
 }
 
 func BuildReverseIndex(logger *log.Logger) {
-	if _, err := os.Stat(rindexFileName); os.IsExist(err) {
+	if _, err := os.Stat(rindexFileName); err == nil {
 		return
 	}
 
