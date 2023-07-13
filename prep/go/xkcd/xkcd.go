@@ -28,6 +28,7 @@ func init() {
 
 func main() {
 	flag.Parse()
+
 	var index Index
 	b, err := os.ReadFile(IndexFileName)
 	if err != nil {
@@ -56,9 +57,12 @@ func main() {
 	idSet := rindex[args[0]]
 	for _, arg := range args[1:] {
 		nextSet, ok := rindex[arg]
+
+		// Ignore misses
 		if !ok {
 			continue
 		}
+
 		if *strict {
 			idSet = Intersection(idSet, nextSet)
 		} else {
@@ -66,6 +70,7 @@ func main() {
 		}
 	}
 
+	fmt.Println()
 	for id := range idSet {
 		fmt.Println("#", id)
 		fmt.Println("======================")
