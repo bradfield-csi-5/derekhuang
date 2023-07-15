@@ -4,18 +4,6 @@ import (
 	"testing"
 )
 
-func equal(s1, s2 IntSet) bool {
-	if len(s1.words) != len(s2.words) {
-		return false
-	}
-	for i, word := range s1.words {
-		if word != s2.words[i] {
-			return false
-		}
-	}
-	return true
-}
-
 func compareSlice(s1 []int, s2 []int) bool {
 	if len(s1) != len(s2) {
 		return false
