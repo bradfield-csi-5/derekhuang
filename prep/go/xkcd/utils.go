@@ -53,6 +53,8 @@ func (s1 IntSet) Union(s2 IntSet) {
 	}
 }
 
+type StrSet map[string]bool
+
 const (
 	IndexFileName    = "xkcd.json"
 	RevIndexFileName = "dckx.json"
@@ -203,8 +205,8 @@ func BuildReverseIndex(logger *log.Logger) {
 	logger.Printf("Normalizing words from index...")
 	rindex := make(ReverseIndex)
 	for i, cmc := range index {
-		normalized := normalize(cmc["alt"], cmc["safe_title"], cmc["transcript"])
-		for _, word := range normalized {
+		normalized := normalize(cmc["alt"], cmc["title"], cmc["transcript"])
+		for word := range normalized {
 			if _, ok := rindex[word]; !ok {
 				rindex[word] = make(IntSet)
 			}
@@ -225,8 +227,8 @@ func BuildReverseIndex(logger *log.Logger) {
 	logger.Println("  done")
 }
 
-func normalize(strs ...string) []string {
-	var ret []string
+func normalize(strs ...string) StrSet {
+	var ret = make(StrSet)
 
 	for _, s := range strs {
 		// Remove ignored words and convert to lowercase
@@ -240,7 +242,7 @@ func normalize(strs ...string) []string {
 		// Ignore short words
 		for _, word := range normalizedWords {
 			if len(word) > 2 {
-				ret = append(ret, word)
+				ret[word] = true
 			}
 		}
 	}
