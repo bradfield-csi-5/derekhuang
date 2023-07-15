@@ -37,6 +37,22 @@ type Record map[string]string
 
 type IntSet map[int]bool
 
+func (s1 IntSet) Intersection(s2 IntSet) {
+	for k := range s1 {
+		if _, exists := s2[k]; !exists {
+			delete(s1, k)
+		}
+	}
+}
+
+func (s1 IntSet) Union(s2 IntSet) {
+	for k := range s2 {
+		if _, exists := s1[k]; !exists {
+			s1[k] = true
+		}
+	}
+}
+
 const (
 	IndexFileName    = "xkcd.json"
 	RevIndexFileName = "dckx.json"
@@ -230,23 +246,4 @@ func normalize(strs ...string) []string {
 	}
 
 	return ret
-}
-
-func Intersection(s1, s2 IntSet) IntSet {
-	ret := make(IntSet)
-	for k := range s1 {
-		if _, exists := s2[k]; exists {
-			ret[k] = true
-		}
-	}
-	return ret
-}
-
-func Union(s1, s2 IntSet) IntSet {
-	for k := range s2 {
-		if _, exists := s1[k]; !exists {
-			s1[k] = true
-		}
-	}
-	return s1
 }

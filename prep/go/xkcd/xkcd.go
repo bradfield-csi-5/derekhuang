@@ -64,9 +64,9 @@ func main() {
 		}
 
 		if *strict {
-			idSet = Intersection(idSet, nextSet)
+			idSet.Intersection(nextSet)
 		} else {
-			idSet = Union(idSet, nextSet)
+			idSet.Union(nextSet)
 		}
 	}
 
