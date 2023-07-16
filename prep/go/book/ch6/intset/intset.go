@@ -87,7 +87,13 @@ func (s *IntSet) UnionWith(t *IntSet) {
 }
 
 func (s *IntSet) IntersectWith(t *IntSet) {
-
+	for i := range s.words {
+		if i < len(t.words) {
+			s.words[i] &= t.words[i]
+		} else {
+			s.words[i] = 0
+		}
+	}
 }
 
 func (s *IntSet) DifferenceWith(t *IntSet) {
