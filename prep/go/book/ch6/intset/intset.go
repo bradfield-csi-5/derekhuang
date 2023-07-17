@@ -5,10 +5,12 @@ import (
 	"fmt"
 )
 
+const uintSize = 32 << (^uint(0) >> 63)
+
 // An IntSet is a set of small non-negative integers.
 // Its zero value represents the empty set.
 type IntSet struct {
-	words []uint64
+	words []uint
 }
 
 // For benchmarking
@@ -41,13 +43,13 @@ func (s *IntSet) Remove(x int) {
 	if !s.Has(x) {
 		return
 	}
-	word, bit := x/64, uint(x%64)
+	word, bit := x/uintSize, uint(x%uintSize)
 	s.words[word] &^= (1 << bit)
 }
 
 // Clear removes all elements from the set
 func (s *IntSet) Clear() {
-	s.words = []uint64{}
+	s.words = []uint{}
 }
 
 // Return a copy of the set
@@ -64,9 +66,9 @@ func (s *IntSet) Elems() []int {
 		if word == 0 {
 			continue
 		}
-		for j := 0; j < 64; j++ {
+		for j := 0; j < uintSize; j++ {
 			if word&(1<<uint(j)) != 0 {
-				ret = append(ret, 64*i+j)
+				ret = append(ret, uintSize*i+j)
 			}
 		}
 	}
@@ -75,13 +77,13 @@ func (s *IntSet) Elems() []int {
 
 // Has reports whether the set contains the non-negative value x.
 func (s *IntSet) Has(x int) bool {
-	word, bit := x/64, uint(x%64)
+	word, bit := x/uintSize, uint(x%uintSize)
 	return word < len(s.words) && s.words[word]&(1<<bit) != 0
 }
 
 // Add adds the non-negative value x to the set.
 func (s *IntSet) Add(x int) {
-	word, bit := x/64, uint(x%64)
+	word, bit := x/uintSize, uint(x%uintSize)
 	for word >= len(s.words) {
 		s.words = append(s.words, 0)
 	}
