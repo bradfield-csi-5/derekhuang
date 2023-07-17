@@ -97,7 +97,11 @@ func (s *IntSet) IntersectWith(t *IntSet) {
 }
 
 func (s *IntSet) DifferenceWith(t *IntSet) {
-
+	for i := range s.words {
+		if i < len(t.words) {
+			s.words[i] &^= t.words[i]
+		}
+	}
 }
 
 func (s *IntSet) SymmetricDifference(t *IntSet) {

@@ -36,7 +36,7 @@ func TestLen(t *testing.T) {
 	}
 	for _, test := range tests {
 		if test.set.Len() != test.want {
-			t.Errorf("(%s).Len() == <%d> want <%d>", test.set.String(), test.set.Len(), test.want)
+			t.Errorf("%s.Len() == <%d> want <%d>", test.set.String(), test.set.Len(), test.want)
 		}
 	}
 }
@@ -46,13 +46,13 @@ func TestRemove(t *testing.T) {
 	set.AddAll(nums...)
 	set.Remove(2)
 	if !set.Has(1) {
-		t.Error("set is missing 1")
+		t.Errorf("%s is missing 1", set.String())
 	}
 	if set.Has(2) {
-		t.Error("set still has 2")
+		t.Errorf("%s still has 2", set.String())
 	}
 	if !set.Has(1) {
-		t.Error("set is missing 3")
+		t.Errorf("%s is missing 3", set.String())
 	}
 }
 
@@ -62,7 +62,7 @@ func TestClear(t *testing.T) {
 	set.Clear()
 	for _, n := range nums {
 		if set.Has(n) {
-			t.Errorf("set.Has(%d) after Clear()", n)
+			t.Errorf("%s.Has(%d) after Clear()", set.String(), n)
 		}
 	}
 }
@@ -72,7 +72,7 @@ func TestCopy(t *testing.T) {
 	set.AddAll(nums...)
 	var copy = set.Copy()
 	if &set == copy {
-		t.Error("set == copy after Copy()")
+		t.Errorf("%s == %s after Copy()", set.String(), copy.String())
 	}
 }
 
@@ -99,7 +99,7 @@ func TestAddAll(t *testing.T) {
 		set.AddAll(test.in...)
 		for _, n := range test.in {
 			if !set.Has(n) {
-				t.Errorf("Has(%d) failed after AddAll(%v...)", n, test.in)
+				t.Errorf("!%s.Has(%d) failed after AddAll(%v...)", set.String(), n, test.in)
 			}
 		}
 	}
@@ -118,7 +118,7 @@ func TestUnionWith(t *testing.T) {
 	// Assert s1 has the ints added to s2
 	for _, n := range nums {
 		if !s1.Has(n) {
-			t.Errorf("%s.Has(%d) failed after UnionWith %s", s1.String(), n, s2.String())
+			t.Errorf("!%s.Has(%d) failed after UnionWith %s", s1.String(), n, s2.String())
 		}
 	}
 }
@@ -140,11 +140,39 @@ func TestIntersectWith(t *testing.T) {
 		// This loop won't run for empty intersections so the length is asserted below
 		for _, n := range test.want {
 			if !test.s1.Has(n) {
-				t.Errorf("%s.Has(%d) failed", test.s1.String(), n)
+				t.Errorf("!%s.Has(%d) failed after IntersectWith", test.s1.String(), n)
 			}
 		}
 		if test.s1.Len() != test.wantLen {
-			t.Errorf("%s isn't expected length %d", test.s1.String(), test.wantLen)
+			t.Errorf("%s isn't expected length %d after IntersectWith", test.s1.String(), test.wantLen)
+		}
+	}
+}
+
+func TestDifferenceWith(t *testing.T) {
+	var tests = []struct {
+		s1      IntSet
+		s2      IntSet
+		want    []int
+		wantLen int
+	}{
+		{s1: create([]int{}), s2: create(nums), want: []int{}, wantLen: 0},
+		{s1: create(nums), s2: create([]int{}), want: nums, wantLen: 3},
+		{s1: create(nums), s2: create([]int{2, 3, 4}), want: []int{1}, wantLen: 1},
+		{s1: create([]int{1, 2, 3, 64}), s2: create([]int{2, 3}), want: []int{1, 64}, wantLen: 2},
+		{s1: create([]int{1, 2, 3, 64}), s2: create([]int{2, 3, 156}), want: []int{1, 64}, wantLen: 2},
+	}
+	for _, test := range tests {
+		test.s1.DifferenceWith(&test.s2)
+
+		// This loop won't run for empty differences so the length is asserted below
+		for _, n := range test.want {
+			if !test.s1.Has(n) {
+				t.Errorf("!%s.Has(%d) failed after DifferenceWith", test.s1.String(), n)
+			}
+		}
+		if test.s1.Len() != test.wantLen {
+			t.Errorf("%s isn't expected length %d after DifferenceWith", test.s1.String(), test.wantLen)
 		}
 	}
 }
