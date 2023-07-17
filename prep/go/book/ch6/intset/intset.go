@@ -11,6 +11,25 @@ type IntSet struct {
 	words []uint64
 }
 
+// For benchmarking
+type IntBoolSet map[int]bool
+
+func (s1 IntBoolSet) Intersect(s2 IntBoolSet) {
+	for k := range s1 {
+		if _, exists := s2[k]; !exists {
+			delete(s1, k)
+		}
+	}
+}
+
+func (s1 IntBoolSet) Union(s2 IntBoolSet) {
+	for k := range s2 {
+		if _, exists := s1[k]; !exists {
+			s1[k] = true
+		}
+	}
+}
+
 // Len reports the number of elements in the set
 func (s *IntSet) Len() int {
 	return len(s.Elems())
@@ -23,7 +42,7 @@ func (s *IntSet) Remove(x int) {
 		return
 	}
 	word, bit := x/64, uint(x%64)
-	s.words[word] &= ^(1 << bit)
+	s.words[word] &^= (1 << bit)
 }
 
 // Clear removes all elements from the set

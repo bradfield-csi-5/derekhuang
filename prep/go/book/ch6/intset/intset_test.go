@@ -204,3 +204,61 @@ func TestSymmetricDifference(t *testing.T) {
 		}
 	}
 }
+
+func BenchmarkIntSetAdd(b *testing.B) {
+	var set IntSet
+	for n := 0; n < b.N; n++ {
+		set.Add(n)
+	}
+}
+
+func BenchmarkIntBoolSetAdd(b *testing.B) {
+	set := make(IntBoolSet)
+	for n := 0; n < b.N; n++ {
+		set[n] = true
+	}
+}
+
+func BenchmarkIntSetIntersectWith(b *testing.B) {
+	var s1 IntSet
+	var s2 IntSet
+	s1.AddAll(1, 2, 3)
+	s2.AddAll(2, 3, 4)
+	for n := 0; n < b.N; n++ {
+		s1.IntersectWith(&s2)
+	}
+}
+
+func BenchmarkIntBoolSetIntersect(b *testing.B) {
+	s1 := make(IntBoolSet)
+	s2 := make(IntBoolSet)
+	for i := 1; i < 4; i++ {
+		s1[i] = true
+		s2[i] = true
+	}
+	for n := 0; n < b.N; n++ {
+		s1.Intersect(s2)
+	}
+}
+
+func BenchmarkIntSetUnionWith(b *testing.B) {
+	var s1 IntSet
+	var s2 IntSet
+	s1.AddAll(1, 2, 3)
+	s2.AddAll(2, 3, 4)
+	for n := 0; n < b.N; n++ {
+		s1.UnionWith(&s2)
+	}
+}
+
+func BenchmarkIntBoolSetUnion(b *testing.B) {
+	s1 := make(IntBoolSet)
+	s2 := make(IntBoolSet)
+	for i := 1; i < 4; i++ {
+		s1[i] = true
+		s2[i] = true
+	}
+	for n := 0; n < b.N; n++ {
+		s1.Union(s2)
+	}
+}
