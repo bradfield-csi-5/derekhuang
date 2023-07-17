@@ -176,3 +176,31 @@ func TestDifferenceWith(t *testing.T) {
 		}
 	}
 }
+
+func TestSymmetricDifference(t *testing.T) {
+	var tests = []struct {
+		s1      IntSet
+		s2      IntSet
+		want    []int
+		wantLen int
+	}{
+		{s1: create([]int{}), s2: create(nums), want: nums, wantLen: 3},
+		{s1: create(nums), s2: create([]int{}), want: nums, wantLen: 3},
+		{s1: create(nums), s2: create([]int{2, 3, 4}), want: []int{1, 4}, wantLen: 2},
+		{s1: create([]int{1, 2, 3, 64}), s2: create([]int{2, 3}), want: []int{1, 64}, wantLen: 2},
+		{s1: create([]int{1, 2, 3, 64}), s2: create([]int{2, 3, 156}), want: []int{1, 64, 156}, wantLen: 3},
+	}
+	for _, test := range tests {
+		test.s1.SymmetricDifference(&test.s2)
+
+		// This loop won't run for empty differences so the length is asserted below
+		for _, n := range test.want {
+			if !test.s1.Has(n) {
+				t.Errorf("!%s.Has(%d) failed after SymmetricDifference", test.s1.String(), n)
+			}
+		}
+		if test.s1.Len() != test.wantLen {
+			t.Errorf("%s isn't expected length %d after SymmetricDifference", test.s1.String(), test.wantLen)
+		}
+	}
+}

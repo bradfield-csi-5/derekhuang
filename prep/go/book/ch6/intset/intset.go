@@ -105,7 +105,13 @@ func (s *IntSet) DifferenceWith(t *IntSet) {
 }
 
 func (s *IntSet) SymmetricDifference(t *IntSet) {
-
+	for i := range t.words {
+		if i < len(s.words) {
+			s.words[i] ^= t.words[i]
+		} else {
+			s.words = append(s.words, t.words[i])
+		}
+	}
 }
 
 // String returns the set as a string of the form "{1 2 3}".
