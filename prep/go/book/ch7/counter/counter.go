@@ -24,3 +24,15 @@ func (c *WordCounter) Write(p []byte) (int, error) {
 	*c += WordCounter(count)
 	return count, nil
 }
+
+type LineCounter int
+
+func (c *LineCounter) Write(p []byte) (int, error) {
+	s := bufio.NewScanner(bytes.NewBuffer(p))
+	count := 0
+	for s.Scan() {
+		count++
+	}
+	*c += LineCounter(count)
+	return count, nil
+}
