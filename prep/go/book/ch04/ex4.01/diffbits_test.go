@@ -1,4 +1,4 @@
-package getdiffbits
+package diffbits
 
 import (
 	"testing"
@@ -15,9 +15,9 @@ var tests = []struct {
 	{"a", "d", 137},
 }
 
-func TestGetDiffBits(t *testing.T) {
+func TestDiffBits(t *testing.T) {
 	for _, tt := range tests {
-		r := GetDiffBits(tt.s1, tt.s2)
+		r := DiffBits(tt.s1, tt.s2)
 		if r != tt.out {
 			t.Errorf("GetDiffBits(%s, %s) = <%d> want <%d>", tt.s1, tt.s2, r, tt.out)
 		}

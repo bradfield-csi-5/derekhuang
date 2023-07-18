@@ -2,7 +2,7 @@
 Exercise 4.1: Write a function that counts the number of bits that are different in two SHA256 hashes.
 */
 
-package getdiffbits
+package diffbits
 
 import (
 	"crypto/sha256"
@@ -16,7 +16,7 @@ func popCount(x uint64) int {
 	return c
 }
 
-func GetDiffBits(a string, b string) int {
+func DiffBits(a string, b string) int {
 	var h1 = sha256.Sum256([]byte(a))
 	var h2 = sha256.Sum256([]byte(b))
 	var c int
