@@ -6,3 +6,7 @@ repos:
         args: ["-style=Google", "-i"]
       - id: cpplint
         args: ["--quiet", "--verbose=5", "--filter=-legal/copyright"]
+  - repo: https://github.com/jumanjihouse/pre-commit-hooks
+    rev: 3.0.0
+    hooks:
+      - id: shellcheck
