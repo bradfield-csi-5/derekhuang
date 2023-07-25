@@ -2,23 +2,28 @@
 
 set -euo pipefail
 
+BASE_URL="https://en.wikipedia.org/w/api.php"
+PARSE_URL="${BASE_URL}?action=parse&format=json&formatversion=2"
+QUERY_URL="${BASE_URL}?action=query&format=json&formatversion=2&prop=extracts&exintro&explaintext"
+SEARCH_URL="${BASE_URL}?action=opensearch&limit=1"
+
+script=$(basename "$0")
+
 function usage {
   cat <<EOF
-Usage: wiki PAGE [SECTION...] [SUBSECTION...]
+Usage: $script PAGE [SECTION...]
 
 Display summary information from Wikipedia.
 
 Arguments:
   PAGE          Wikipedia page to search for.
   SECTION       Optional. A section on a page to get the summary for.
-  SUBSECTION    Optional. A subsection to get the summary for.
 EOF
   exit 1
 }
 
 search=${1:-}
 section=${2:-}
-# subsection=${3:-}
 if [ -z "$search" ]; then
   usage
 fi
@@ -30,14 +35,38 @@ function get_page {
   url=$(curl -s --url-query "search=$search" "$SEARCH_URL" | jq -r '.[3][0]')
 
   if [ "$url" == "null" ]; then
-    echo ""
+    echo
     return
   fi
 
   basename "$url"
 }
 
+function get_section_idx {
+  local sect="$1"
+  # TODO: get section index from list of sections
+  # curl -s --url-query "page=$page" "${PARSE_URL}&prop=sections&redirects" | jq '.parse.sections'
+}
+
+function get_sections {
+  local si=${1:-0}
+  if [ "$si" -gt 0 ]; then
+    # TODO: get subsections from wiki api
+    curl -s --url-query "page=$page" "${PARSE_URL}&prop=sections&section=${si}&redirects" | jq '.parse.sections'
+    return
+  fi
+
+  # Get all sections
+  curl -s --url-query "page=$page" "${PARSE_URL}&prop=sections&redirects" | jq '.parse.sections'
+}
+
 function print_summary {
+  if [ -n "$section" ]; then
+    echo "===== $page > $section ====="
+    # TODO: print the first sentence of the section
+    return
+  fi
+
   echo "===== $page ====="
   curl -s --url-query "titles=${page}" "${QUERY_URL}&redirects" | \
   jq -r '.query.pages[0].extract | split(". ") | .[0]'
@@ -45,32 +74,34 @@ function print_summary {
 }
 
 function print_sections {
-  local level=$1
+  if [ -n "$section" ]; then
+    echo "===== Subsections ====="
+    # TODO: use the section index to get subsections from the wiki api
+    return
+  fi
+
   echo "===== Sections ====="
   curl -s --url-query "page=$page" "${PARSE_URL}&prop=sections&redirects" | \
-  jq ".parse.sections | map_values(select(.toclevel == $level))" | \
+  jq "[.parse.sections[] | select(.toclevel == 1)]" | \
   jq -r '.[].line'
 }
 
 function main {
-  local BASE_URL="https://en.wikipedia.org/w/api.php"
-  local PARSE_URL="${BASE_URL}?action=parse&format=json&formatversion=2"
-  local QUERY_URL="${BASE_URL}?action=query&format=json&formatversion=2&prop=extracts&exintro&explaintext"
-  local SEARCH_URL="${BASE_URL}?action=opensearch&limit=1"
-
   page=$(get_page)
   if [ -z "$page" ]; then
     echo "Page not found." >&2
     exit 1
   fi
 
-  print_summary "$page"
-
-  print_sections 1
-
   if [ -n "$section" ]; then
-    echo "would handle sections"
+    si=$(get_section_idx "$section")
+    sections=$(get_sections "$si")
+  else
+    sections=$(get_sections)
   fi
+
+  print_summary
+  print_sections
 }
 
 main
