@@ -17,26 +17,29 @@ function usage {
   exit 1
 }
 
-page=${1:-"NOPAGE!"}
-if [ "${page}" == "NOPAGE!" ]; then
+search=${1:-"NOPAGE!"}
+if [ "$search" == "NOPAGE!" ]; then
   echo "page is required" >&2
   echo
   usage
 fi
 
-function page_exists {
+function get_page {
   # Search queries always return a 200 with the fourth array element
   # as an array of urls to pages if any exist
   # echo "page req: curl -s --url-query \"search=${page}\" \"${SEARCH_URL}\""
-  # TODO: use page from response
-  if [ "$(curl -s --url-query "search=${page}" "${SEARCH_URL}" | jq '.[3] | length > 0')" == "true" ]; then
-    return 0
+  local url
+  url=$(curl -s --url-query "search=$search" "$SEARCH_URL" | jq -r '.[3][0]')
+  if [ "$url" == "null" ]; then
+    echo ""
+    return
   fi
-  return 1
+  basename "$url"
 }
 
+page=$(get_page)
 # Short circuit if no pages found
-if ! page_exists; then
+if [ -z "$page" ]; then
   echo "Page ${page} not found" >&2
   usage
 fi
