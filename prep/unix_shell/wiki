@@ -2,62 +2,75 @@
 
 set -euo pipefail
 
-BASE_URL="https://en.wikipedia.org/w/api.php"
-PARSE_URL="${BASE_URL}?action=parse&format=json&formatversion=2"
-QUERY_URL="${BASE_URL}?action=query&format=json&formatversion=2&prop=extracts&exintro&explaintext"
-SEARCH_URL="${BASE_URL}?action=opensearch&limit=1"
-
-script=$(basename "$0")
-
 function usage {
-  # Display usage and exit
-  echo "Usage: ${script} PAGE [SECTION...] [SUBSECTION...]" >&2
-  echo
-  echo 'Display summary information from Wikipedia.' >&2
+  cat <<EOF
+Usage: wiki PAGE [SECTION...] [SUBSECTION...]
+
+Display summary information from Wikipedia.
+
+Arguments:
+  PAGE          Wikipedia page to search for.
+  SECTION       Optional. A section on a page to get the summary for.
+  SUBSECTION    Optional. A subsection to get the summary for.
+EOF
   exit 1
 }
 
-search=${1:-"NOPAGE!"}
-if [ "$search" == "NOPAGE!" ]; then
-  echo "page is required" >&2
-  echo
+search=${1:-}
+section=${2:-}
+# subsection=${3:-}
+if [ -z "$search" ]; then
   usage
 fi
 
 function get_page {
   # Search queries always return a 200 with the fourth array element
   # as an array of urls to pages if any exist
-  # echo "page req: curl -s --url-query \"search=${page}\" \"${SEARCH_URL}\""
   local url
   url=$(curl -s --url-query "search=$search" "$SEARCH_URL" | jq -r '.[3][0]')
+
   if [ "$url" == "null" ]; then
     echo ""
     return
   fi
+
   basename "$url"
 }
 
-page=$(get_page)
-# Short circuit if no pages found
-if [ -z "$page" ]; then
-  echo "Page ${page} not found" >&2
-  usage
-fi
+function print_summary {
+  echo "===== $page ====="
+  curl -s --url-query "titles=${page}" "${QUERY_URL}&redirects" | \
+  jq -r '.query.pages[0].extract | split(". ") | .[0]'
+  echo
+}
 
-# Print the first sentence
-echo "Wikipedia page: '${page}'"
-# echo "wiki req: curl -s --url-query \"titles=${page}\" \"${QUERY_URL}&redirects\""
-intro=$(curl -s --url-query "titles=${page}" "${QUERY_URL}&redirects" | jq -r '.query.pages[0].extract | split(". ") | .[0]')
-echo "  $intro"
-echo
+function print_sections {
+  local level=$1
+  echo "===== Sections ====="
+  curl -s --url-query "page=$page" "${PARSE_URL}&prop=sections&redirects" | \
+  jq ".parse.sections | map_values(select(.toclevel == $level))" | \
+  jq -r '.[].line'
+}
 
-# Print section headings
-echo "Sections:"
-# echo "sections req: curl -s --url-query \"page=${page}\" \"${PARSE_URL}&prop=sections&redirects\""
-IFS=$'\n'
-for sect in $(curl -s --url-query "page=${page}" "${PARSE_URL}&prop=sections&redirects" | jq '.parse.sections | map_values(select(.toclevel == 1))' | jq -r '.[].line'); do
-  echo "  $sect"
-done
-unset IFS
+function main {
+  local BASE_URL="https://en.wikipedia.org/w/api.php"
+  local PARSE_URL="${BASE_URL}?action=parse&format=json&formatversion=2"
+  local QUERY_URL="${BASE_URL}?action=query&format=json&formatversion=2&prop=extracts&exintro&explaintext"
+  local SEARCH_URL="${BASE_URL}?action=opensearch&limit=1"
 
-# TODO: handle subsections
+  page=$(get_page)
+  if [ -z "$page" ]; then
+    echo "Page not found." >&2
+    exit 1
+  fi
+
+  print_summary "$page"
+
+  print_sections 1
+
+  if [ -n "$section" ]; then
+    echo "would handle sections"
+  fi
+}
+
+main
