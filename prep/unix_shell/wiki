@@ -46,13 +46,12 @@ function get_section_idx {
   local sect=$1
   local sections=$2
   # Normalize sect before comparing
-  sect=$(echo "$sect" | tr "[:upper:]" "[:lower:]")
+  sect=$(tr "[:upper:]" "[:lower:]" <<< "$sect")
   local i=0
   local IFS=$'\n'
-  # TODO: handle spaces in section
   for s in $(echo "$sections" | jq -r '.[].line' | tr "[:upper:]" "[:lower:]"); do
     (( i++ ))
-    if [ "$sect" == "$s" ]; then
+    if [ "$s" == "$sect" ]; then
       echo $i
       return
     fi
@@ -66,8 +65,8 @@ function get_sections {
 
 function print_summary {
   if [ -n "$section" ]; then
-    # Capitalize the first letter of section to search for it in the page extract
-    section="$(echo "${section:0:1}" | tr '[:lower:]' '[:upper:]')""${section:1}"
+    # Capitalize the first letter of section to search for it in the extract text
+    section="$(tr '[:lower:]' '[:upper:]' <<< "${section:0:1}")""${section:1}"
     echo "===== $page > $section ====="
     curl -s --url-query "titles=${page}" "${QUERY_URL}&exsectionformat=plain" | \
       jq -r ".query.pages[0].extract | split(\"\\n${section}\\n\")[1] | split(\".\")[0]"
@@ -86,7 +85,7 @@ function print_sections {
   if [ -n "$section" ]; then
     echo "===== Subsections ====="
     local IFS=$'\n'
-    for s in $(echo "$sects" | jq -r '.[] | select(.toclevel == 2) | .line'); do
+    for s in $(jq -r '.[] | select(.toclevel == 2) | .line' <<< "$sects"); do
       echo "$s"
     done
     return
