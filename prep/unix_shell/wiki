@@ -28,27 +28,57 @@ if [ -z "$search" ]; then
   usage
 fi
 
-function get_page {
-  # Search queries always return a 200 with the fourth array element
-  # as an array of urls to pages if any exist
-  local url
-  url=$(curl -s --url-query "search=$search" "$SEARCH_URL" | jq -r '.[3][0]')
+function _curl {
+  curl -s --url-query "$2" "$1"
+}
 
-  if [ "$url" == "null" ]; then
+function print_sections {
+  local sects=$1
+  if [ -n "$section" ]; then
+
+    # If section was passed as an arg, print its subsections
+    echo "===== Subsections ====="
+    local IFS=$'\n'
+    for s in $(jq -r '.[] | select(.toclevel == 2) | .line' <<< "$sects"); do
+      echo "$s"
+    done
+    return
+  fi
+
+  # Otherwise print all sections at the first level
+  echo "===== Sections ====="
+  echo "$sects" | jq -r '.[] | select(.toclevel == 1) | .line'
+}
+
+function print_summary {
+  local pg="$1"
+  if [ -n "$section" ]; then
+
+    # Capitalize the first letter of section to search for it in the extract text.
+    section="$(tr '[:lower:]' '[:upper:]' <<< "${section:0:1}")""${section:1}"
+    echo "===== $pg > $section ====="
+    _curl "${QUERY_URL}&exsectionformat=plain" "titles=${page}" | \
+    jq -r ".query.pages[0].extract | split(\"\\n${section}\\n\")[1] | split(\".\")[0]"
     echo
     return
   fi
 
-  basename "$url"
+  echo "===== $pg ====="
+  _curl "${QUERY_URL}&exintro" "titles=${page}" | \
+  jq -r '.query.pages[0].extract | split(". ") | .[0]'
+  echo
 }
 
 function get_section_idx {
   local sect=$1
   local sections=$2
+
   # Normalize sect before comparing
   sect=$(tr "[:upper:]" "[:lower:]" <<< "$sect")
   local i=0
   local IFS=$'\n'
+
+  # Normalize the section's `line` attribute as well
   for s in $(echo "$sections" | jq -r '.[].line' | tr "[:upper:]" "[:lower:]"); do
     (( i++ ))
     if [ "$s" == "$sect" ]; then
@@ -59,60 +89,34 @@ function get_section_idx {
   echo -1
 }
 
-function get_sections {
-  curl -s --url-query "page=$page" "${PARSE_URL}&prop=sections&redirects" | jq '.parse.sections'
-}
-
-function print_summary {
-  if [ -n "$section" ]; then
-    # Capitalize the first letter of section to search for it in the extract text
-    section="$(tr '[:lower:]' '[:upper:]' <<< "${section:0:1}")""${section:1}"
-    echo "===== $page > $section ====="
-    curl -s --url-query "titles=${page}" "${QUERY_URL}&exsectionformat=plain" | \
-      jq -r ".query.pages[0].extract | split(\"\\n${section}\\n\")[1] | split(\".\")[0]"
-    echo
-    return
-  fi
-
-  echo "===== $page ====="
-  curl -s --url-query "titles=${page}" "${QUERY_URL}&exintro" | \
-  jq -r '.query.pages[0].extract | split(". ") | .[0]'
-  echo
-}
-
-function print_sections {
-  local sects=$1
-  if [ -n "$section" ]; then
-    echo "===== Subsections ====="
-    local IFS=$'\n'
-    for s in $(jq -r '.[] | select(.toclevel == 2) | .line' <<< "$sects"); do
-      echo "$s"
-    done
-    return
-  fi
-
-  echo "===== Sections ====="
-  echo "$sects" | jq -r '.[] | select(.toclevel == 1) | .line'
-}
-
 function main {
-  page=$(get_page)
-  if [ -z "$page" ]; then
+  # Search queries always return a 200 which looks like:
+  # ["walrus",["Walrus"],[""],["https://en.wikipedia.org/wiki/Walrus"]]
+  # If the page doesn't exist, the fourth element will be an empty array
+  # and the jq filter will return 'null' which is a no-op when passed to `basename`.
+  page=$(basename "$(_curl "$SEARCH_URL" "search=$search" | jq -r '.[3][0]')")
+  if [ "$page" == "null" ]; then
     echo "Page not found." >&2
     exit 1
   fi
 
-  sections=$(get_sections)
+  # Fetch all sections
+  sections=$(_curl "${PARSE_URL}&prop=sections&redirects" "page=$page" | jq '.parse.sections')
   if [ -n "$section" ]; then
+
+    # If a section was passed as an arg, get the index and short circuit if not found
     si=$(get_section_idx "$section" "$sections")
     if [ "$si" -eq -1 ]; then
       echo "Section '${section}' not found." >&2
       exit 1
     fi
-     sections="$(curl -s --url-query "page=$page" "${PARSE_URL}&prop=sections&section=${si}&redirects" | jq '.parse.sections')"
+
+    # The parse endpoint allows specifying a section by number, responding with a subset
+    # of sections which includes itself and its subsections. Reassign `sections` to the subset.
+    sections="$(_curl "${PARSE_URL}&prop=sections&section=${si}&redirects" "page=$page" | jq '.parse.sections')"
   fi
 
-  print_summary
+  print_summary "$page"
   print_sections "$sections"
 }
 
