@@ -19,11 +19,11 @@ int main(int argc, char **argv) {
 
   while ((c = getopt(argc, argv, "v")) != -1) {
     switch (c) {
-      case 'v':
-        vertical = 1;
-        break;
-      default:
-        abort();
+    case 'v':
+      vertical = 1;
+      break;
+    default:
+      abort();
     }
   }
 

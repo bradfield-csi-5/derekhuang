@@ -26,18 +26,18 @@ int main(int argc, char **argv) {
 
   while ((opt = getopt(argc, argv, "Ahl")) != -1) {
     switch (opt) {
-      case 'l':
-        long_format = true;
-        break;
-      case 'A':
-        show_hidden = true;
-        break;
-      case 'h':
-        human_readable = true;
-        break;
-      default:
-        fprintf(stderr, "Usage: %s [-Ahl] [file...]\n", *argv);
-        exit(EXIT_FAILURE);
+    case 'l':
+      long_format = true;
+      break;
+    case 'A':
+      show_hidden = true;
+      break;
+    case 'h':
+      human_readable = true;
+      break;
+    default:
+      fprintf(stderr, "Usage: %s [-Ahl] [file...]\n", *argv);
+      exit(EXIT_FAILURE);
     }
   }
 

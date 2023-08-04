@@ -28,45 +28,45 @@ double htoi(char s[], int i) {
   double sum = 0.0;
   for (int j = 0; j < len; j++) {
     switch (s[j]) {
-      case '1':
-      case '2':
-      case '3':
-      case '4':
-      case '5':
-      case '6':
-      case '7':
-      case '8':
-      case '9':
-        num = s[j] - '0';
-        break;
-      case 'A':
-      case 'a':
-        num = 10;
-        break;
-      case 'B':
-      case 'b':
-        num = 11;
-        break;
-      case 'C':
-      case 'c':
-        num = 12;
-        break;
-      case 'D':
-      case 'd':
-        num = 13;
-        break;
-      case 'E':
-      case 'e':
-        num = 14;
-        break;
-      case 'F':
-      case 'f':
-        num = 15;
-        break;
-      default:
-        // 0 or x
-        num = 0;
-        break;
+    case '1':
+    case '2':
+    case '3':
+    case '4':
+    case '5':
+    case '6':
+    case '7':
+    case '8':
+    case '9':
+      num = s[j] - '0';
+      break;
+    case 'A':
+    case 'a':
+      num = 10;
+      break;
+    case 'B':
+    case 'b':
+      num = 11;
+      break;
+    case 'C':
+    case 'c':
+      num = 12;
+      break;
+    case 'D':
+    case 'd':
+      num = 13;
+      break;
+    case 'E':
+    case 'e':
+      num = 14;
+      break;
+    case 'F':
+    case 'f':
+      num = 15;
+      break;
+    default:
+      // 0 or x
+      num = 0;
+      break;
     }
     if (num > 0) {
       // printf("sum before: %f\n", sum);
