@@ -14,6 +14,7 @@ int _getline(char *s, int lim);
 int atoi(char *s);
 double atof(char *s);
 void reverse(char *s);
+int strindex(char *s, char *t);
 
 int main(int argc, char **argv) {
   // char s[50];
@@ -26,6 +27,14 @@ int main(int argc, char **argv) {
   char a[] = "abcdefg";
   reverse(&a[0]);
   assert(strcmp(a, "gfedcba") == 0);
+
+  char b[] = "abcdefg";
+  assert(strindex(&b[0], "a") == 0);
+  assert(strindex(&b[0], "ab") == 0);
+  assert(strindex(&b[0], "ac") == -1);
+  assert(strindex(&b[0], "def") == 3);
+  assert(strindex(&b[0], "dfe") == -1);
+  assert(strindex(&b[0], "g") == 6);
   printf("5.6 All Passed!\n");
 }
 
@@ -79,4 +88,27 @@ void reverse(char *s) {
     *s = *p;
     *p = c;
   }
+}
+
+/* strindex:  return index of t in s, −1 if none */
+int strindex(char *s, char *t) {
+  int i = 0;
+  char *first;
+  char *second;
+
+  while (*s != '\0') {
+    if (*s == *t) {
+      first = s;
+      second = t;
+      while (*first++ == *second++) {
+        if (*second == '\0') {
+          return i;
+        }
+      }
+    }
+    i++;
+    s++;
+  }
+
+  return -1;
 }
