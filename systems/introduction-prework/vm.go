@@ -30,13 +30,30 @@ func compute(memory []byte) {
 
 	// Keep looping, like a physical computer's clock
 	for {
+		pc := registers[0]
+		op := memory[pc]
 
-		// op := TODO // fetch the opcode
-
-		// // decode and execute
-		// switch op {
-		// case Load:
-		//   TODO
-		// ...
+		// decode and execute
+		switch op {
+		case Load:
+			reg := memory[pc+1]
+			addr := memory[pc+2]
+			registers[reg] = memory[addr]
+			pc += 3
+		case Store:
+			reg := memory[pc+1]
+			addr := memory[pc+2]
+			memory[addr] = registers[reg]
+			pc += 3
+		case Add:
+			registers[1] += registers[2]
+			pc += 3
+		case Sub:
+			registers[1] -= registers[2]
+			pc += 3
+		case Halt:
+			return
+		}
+		registers[0] = pc
 	}
 }
