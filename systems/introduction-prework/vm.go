@@ -46,10 +46,30 @@ func compute(memory []byte) {
 			memory[addr] = registers[reg]
 			pc += 3
 		case Add:
-			registers[1] += registers[2]
+			reg1 := memory[pc+1]
+			reg2 := memory[pc+2]
+			registers[reg1] += registers[reg2]
 			pc += 3
 		case Sub:
-			registers[1] -= registers[2]
+			reg1 := memory[pc+1]
+			reg2 := memory[pc+2]
+			registers[reg1] -= registers[reg2]
+			pc += 3
+		case Addi:
+			reg := memory[pc+1]
+			registers[reg] += memory[pc+2]
+			pc += 3
+		case Subi:
+			reg := memory[pc+1]
+			registers[reg] -= memory[pc+2]
+			pc += 3
+		case Jump:
+			pc = memory[pc+1]
+		case Beqz:
+			reg := memory[pc+1]
+			if registers[reg] == 0 {
+				pc += memory[pc+2]
+			}
 			pc += 3
 		case Halt:
 			return
