@@ -2,18 +2,14 @@ section .text
 global binary_convert
 binary_convert:
     xor     rax, rax
-    mov     cl, 2
+    mov     rcx, 2      ; store multiplicand
 
-next:
-    cmp     byte [rdi], 0
-    je      return
-    mov     bl, [rdi]
-    sub     bl, 48
-    mul     cl
-    add     al, bl
-    inc     rdi
-    jmp     next
-
-return:
+loop:
+    mov     bl, [rdi]       ; move first char
+    sub     bl, 48          ; convert char into int
+    mul     rcx             ; multiply and store in rax
+    add     al, bl          ; add result with current digit
+    inc     rdi             ; move to next char
+    cmp     byte [rdi], 0   ; check if char is null
+    jne     loop            ; keep looping if not
     ret
-
