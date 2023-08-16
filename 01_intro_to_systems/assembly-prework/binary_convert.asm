@@ -11,7 +11,7 @@ next:
     sub     bl, 48
     mul     cl
     add     al, bl
-    inc     dil
+    inc     rdi
     jmp     next
 
 return:
