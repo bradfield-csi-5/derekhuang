@@ -77,3 +77,6 @@ go.work
 .vscode
 .DS_Store
 *.swp
+
+tests
+
