@@ -1,0 +1,127 @@
+❯ objdump -d a.out
+
+a.out:  file format mach-o 64-bit x86-64
+
+Disassembly of section __TEXT,__text:
+
+0000000100003d60 <_pagecount>:
+100003d60: 55                           pushq   %rbp
+100003d61: 48 89 e5                     movq    %rsp, %rbp
+100003d64: 48 0f bc c7                  bsfq    %rdi, %rax
+100003d68: ff c0                        incl    %eax
+100003d6a: 48 0f bc ce                  bsfq    %rsi, %rcx
+100003d6e: 31 d2                        xorl    %edx, %edx
+100003d70: 48 85 ff                     testq   %rdi, %rdi
+100003d73: 0f 44 c2                     cmovel  %edx, %eax
+100003d76: 48 85 f6                     testq   %rsi, %rsi
+100003d79: f7 d1                        notl    %ecx
+100003d7b: 0f 44 ca                     cmovel  %edx, %ecx
+100003d7e: 01 c1                        addl    %eax, %ecx
+100003d80: b8 01 00 00 00               movl    $1, %eax
+100003d85: 48 d3 e0                     shlq    %cl, %rax
+100003d88: 5d                           popq    %rbp
+100003d89: c3                           retq
+100003d8a: 66 0f 1f 44 00 00            nopw    (%rax,%rax)
+
+0000000100003d90 <_main>:
+100003d90: 55                           pushq   %rbp
+100003d91: 48 89 e5                     movq    %rsp, %rbp
+100003d94: 41 57                        pushq   %r15
+100003d96: 41 56                        pushq   %r14
+100003d98: 41 55                        pushq   %r13
+100003d9a: 41 54                        pushq   %r12
+100003d9c: 53                           pushq   %rbx
+100003d9d: 48 83 ec 18                  subq    $24, %rsp
+100003da1: 31 db                        xorl    %ebx, %ebx
+100003da3: 41 bc 80 96 98 00            movl    $10000000, %r12d        ## imm = 0x989680
+100003da9: e8 40 01 00 00               callq   0x100003eee <_printf+0x100003eee>
+100003dae: 48 89 45 c0                  movq    %rax, -64(%rbp)
+100003db2: 48 be ab aa aa aa aa aa aa aa        movabsq $-6148914691236517205, %rsi ## imm = 0xAAAAAAAAAAAAAAAB
+100003dbc: 4c 8d 35 7d 01 00 00         leaq    381(%rip), %r14         ## 0x100003f40 <_printf+0x100003f40>
+100003dc3: 4c 8d 3d 96 01 00 00         leaq    406(%rip), %r15         ## 0x100003f60 <_printf+0x100003f60>
+100003dca: 31 c9                        xorl    %ecx, %ecx
+100003dcc: 45 31 ed                     xorl    %r13d, %r13d
+100003dcf: 90                           nop
+100003dd0: 48 89 d8                     movq    %rbx, %rax
+100003dd3: 48 f7 e6                     mulq    %rsi
+100003dd6: 48 c1 e2 02                  shlq    $2, %rdx
+100003dda: 48 83 e2 f8                  andq    $-8, %rdx
+100003dde: 48 8d 04 52                  leaq    (%rdx,%rdx,2), %rax
+100003de2: 48 89 ca                     movq    %rcx, %rdx
+100003de5: 48 29 c2                     subq    %rax, %rdx
+100003de8: 41 8b 04 16                  movl    (%r14,%rdx), %eax
+100003dec: 41 03 04 17                  addl    (%r15,%rdx), %eax
+100003df0: 41 01 c5                     addl    %eax, %r13d
+100003df3: 41 ff c5                     incl    %r13d
+100003df6: 48 83 c1 08                  addq    $8, %rcx
+100003dfa: 48 ff c3                     incq    %rbx
+100003dfd: 41 ff cc                     decl    %r12d
+100003e00: 75 ce                        jne     0x100003dd0 <_main+0x40>
+100003e02: e8 e7 00 00 00               callq   0x100003eee <_printf+0x100003eee>
+100003e07: 48 89 45 c8                  movq    %rax, -56(%rbp)
+100003e0b: 41 bc 80 96 98 00            movl    $10000000, %r12d        ## imm = 0x989680
+100003e11: 31 db                        xorl    %ebx, %ebx
+100003e13: e8 d6 00 00 00               callq   0x100003eee <_printf+0x100003eee>
+100003e18: 49 b8 ab aa aa aa aa aa aa aa        movabsq $-6148914691236517205, %r8 ## imm = 0xAAAAAAAAAAAAAAAB
+100003e22: 48 89 45 d0                  movq    %rax, -48(%rbp)
+100003e26: 31 f6                        xorl    %esi, %esi
+100003e28: 0f 1f 84 00 00 00 00 00      nopl    (%rax,%rax)
+100003e30: 48 89 d8                     movq    %rbx, %rax
+100003e33: 49 f7 e0                     mulq    %r8
+100003e36: 48 c1 e2 02                  shlq    $2, %rdx
+100003e3a: 48 83 e2 f8                  andq    $-8, %rdx
+100003e3e: 48 8d 04 52                  leaq    (%rdx,%rdx,2), %rax
+100003e42: 48 89 f1                     movq    %rsi, %rcx
+100003e45: 48 29 c1                     subq    %rax, %rcx
+100003e48: 49 8b 04 0e                  movq    (%r14,%rcx), %rax
+100003e4c: 49 8b 14 0f                  movq    (%r15,%rcx), %rdx
+100003e50: 48 0f bc c8                  bsfq    %rax, %rcx
+100003e54: 48 0f bc fa                  bsfq    %rdx, %rdi
+100003e58: 29 f9                        subl    %edi, %ecx
+100003e5a: bf 01 00 00 00               movl    $1, %edi
+100003e5f: 48 d3 e7                     shlq    %cl, %rdi
+100003e62: 01 c2                        addl    %eax, %edx
+100003e64: 01 d7                        addl    %edx, %edi
+100003e66: 41 01 fd                     addl    %edi, %r13d
+100003e69: 48 83 c6 08                  addq    $8, %rsi
+100003e6d: 48 ff c3                     incq    %rbx
+100003e70: 41 ff cc                     decl    %r12d
+100003e73: 75 bb                        jne     0x100003e30 <_main+0xa0>
+100003e75: e8 74 00 00 00               callq   0x100003eee <_printf+0x100003eee>
+100003e7a: 48 8b 55 c8                  movq    -56(%rbp), %rdx
+100003e7e: 48 03 55 d0                  addq    -48(%rbp), %rdx
+100003e82: 48 8b 4d c0                  movq    -64(%rbp), %rcx
+100003e86: 48 29 d1                     subq    %rdx, %rcx
+100003e89: 48 01 c1                     addq    %rax, %rcx
+100003e8c: 66 48 0f 6e c9               movq    %rcx, %xmm1
+100003e91: 66 0f 62 0d 67 00 00 00      punpckldq       103(%rip), %xmm1 ## xmm1 = xmm1[0],mem[0],xmm1[1],mem[1]
+                                                                        ## 0x100003f00 <_printf+0x100003f00>
+100003e99: 66 0f 5c 0d 6f 00 00 00      subpd   111(%rip), %xmm1        ## 0x100003f10 <_printf+0x100003f10>
+100003ea1: 66 0f 28 c1                  movapd  %xmm1, %xmm0
+100003ea5: 66 0f 15 c1                  unpckhpd        %xmm1, %xmm0            ## xmm0 = xmm0[1],xmm1[1]
+100003ea9: f2 0f 58 c1                  addsd   %xmm1, %xmm0
+100003ead: f2 0f 5e 05 6b 00 00 00      divsd   107(%rip), %xmm0        ## 0x100003f20 <_printf+0x100003f20>
+100003eb5: f2 0f 10 0d 6b 00 00 00      movsd   107(%rip), %xmm1        ## xmm1 = mem[0],zero
+                                                                        ## 0x100003f28 <_printf+0x100003f28>
+100003ebd: f2 0f 59 c8                  mulsd   %xmm0, %xmm1
+100003ec1: f2 0f 5e 0d 67 00 00 00      divsd   103(%rip), %xmm1        ## 0x100003f30 <_printf+0x100003f30>
+100003ec9: 48 8d 3d a8 00 00 00         leaq    168(%rip), %rdi         ## 0x100003f78 <_printf+0x100003f78>
+100003ed0: be 80 96 98 00               movl    $10000000, %esi         ## imm = 0x989680
+100003ed5: b0 02                        movb    $2, %al
+100003ed7: e8 18 00 00 00               callq   0x100003ef4 <_printf+0x100003ef4>
+100003edc: 44 89 e8                     movl    %r13d, %eax
+100003edf: 48 83 c4 18                  addq    $24, %rsp
+100003ee3: 5b                           popq    %rbx
+100003ee4: 41 5c                        popq    %r12
+100003ee6: 41 5d                        popq    %r13
+100003ee8: 41 5e                        popq    %r14
+100003eea: 41 5f                        popq    %r15
+100003eec: 5d                           popq    %rbp
+100003eed: c3                           retq
+
+Disassembly of section __TEXT,__stubs:
+
+0000000100003eee <__stubs>:
+100003eee: ff 25 0c 01 00 00            jmpq    *268(%rip)              ## 0x100004000 <_printf+0x100004000>
+100003ef4: ff 25 0e 01 00 00            jmpq    *270(%rip)              ## 0x100004008 <_printf+0x100004008>
+
