@@ -7,7 +7,6 @@
 
 // NOTE: we know that memory_size and page_size are both powers of 2, so one
 // divides the other
-//
 
 uint64_t pagecount(uint64_t memory_size, uint64_t page_size) {
   uint64_t a = __builtin_ffsl(memory_size);
@@ -17,7 +16,7 @@ uint64_t pagecount(uint64_t memory_size, uint64_t page_size) {
   return 1LLU << (a - b);
 }
 
-int main (int argc, char** argv) {
+int main(int argc, char **argv) {
   clock_t baseline_start, baseline_end, test_start, test_end;
   uint64_t memory_size, page_size;
   double clocks_elapsed, time_elapsed;
@@ -50,4 +49,3 @@ int main (int argc, char** argv) {
          time_elapsed * 1e9 / TEST_LOOPS);
   return ignore;
 }
-
