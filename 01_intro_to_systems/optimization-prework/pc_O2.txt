@@ -1,0 +1,142 @@
+❯ objdump -d a.out
+
+a.out:  file format mach-o 64-bit x86-64
+
+Disassembly of section __TEXT,__text:
+
+0000000100003d20 <_pagecount>:
+100003d20: 55                           pushq   %rbp
+100003d21: 48 89 e5                     movq    %rsp, %rbp
+100003d24: 48 0f bc c7                  bsfq    %rdi, %rax
+100003d28: ff c0                        incl    %eax
+100003d2a: 48 0f bc ce                  bsfq    %rsi, %rcx
+100003d2e: 31 d2                        xorl    %edx, %edx
+100003d30: 48 85 ff                     testq   %rdi, %rdi
+100003d33: 0f 44 c2                     cmovel  %edx, %eax
+100003d36: 48 85 f6                     testq   %rsi, %rsi
+100003d39: f7 d1                        notl    %ecx
+100003d3b: 0f 44 ca                     cmovel  %edx, %ecx
+100003d3e: 01 c1                        addl    %eax, %ecx
+100003d40: b8 01 00 00 00               movl    $1, %eax
+100003d45: 48 d3 e0                     shlq    %cl, %rax
+100003d48: 5d                           popq    %rbp
+100003d49: c3                           retq
+100003d4a: 66 0f 1f 44 00 00            nopw    (%rax,%rax)
+
+0000000100003d50 <_main>:
+100003d50: 55                           pushq   %rbp
+100003d51: 48 89 e5                     movq    %rsp, %rbp
+100003d54: 41 57                        pushq   %r15
+100003d56: 41 56                        pushq   %r14
+100003d58: 41 55                        pushq   %r13
+100003d5a: 41 54                        pushq   %r12
+100003d5c: 53                           pushq   %rbx
+100003d5d: 50                           pushq   %rax
+100003d5e: 45 31 e4                     xorl    %r12d, %r12d
+100003d61: 41 bd 08 00 00 00            movl    $8, %r13d
+100003d67: bb 01 00 00 00               movl    $1, %ebx
+100003d6c: 41 be 80 96 98 00            movl    $10000000, %r14d        ## imm = 0x989680
+100003d72: e8 73 01 00 00               callq   0x100003eea <_printf+0x100003eea>
+100003d77: 48 89 45 d0                  movq    %rax, -48(%rbp)
+100003d7b: 49 b8 ab aa aa aa aa aa aa aa        movabsq $-6148914691236517205, %r8 ## imm = 0xAAAAAAAAAAAAAAAB
+100003d85: 4c 8d 0d b4 01 00 00         leaq    436(%rip), %r9          ## 0x100003f40 <_printf+0x100003f40>
+100003d8c: 48 8d 3d cd 01 00 00         leaq    461(%rip), %rdi         ## 0x100003f60 <_printf+0x100003f60>
+100003d93: 31 c9                        xorl    %ecx, %ecx
+100003d95: 45 31 ff                     xorl    %r15d, %r15d
+100003d98: 0f 1f 84 00 00 00 00 00      nopl    (%rax,%rax)
+100003da0: 48 89 d8                     movq    %rbx, %rax
+100003da3: 49 f7 e0                     mulq    %r8
+100003da6: 48 c1 e2 02                  shlq    $2, %rdx
+100003daa: 48 83 e2 f8                  andq    $-8, %rdx
+100003dae: 48 8d 04 52                  leaq    (%rdx,%rdx,2), %rax
+100003db2: 4c 89 ee                     movq    %r13, %rsi
+100003db5: 48 29 c6                     subq    %rax, %rsi
+100003db8: 4c 89 e0                     movq    %r12, %rax
+100003dbb: 49 f7 e0                     mulq    %r8
+100003dbe: 48 c1 e2 02                  shlq    $2, %rdx
+100003dc2: 48 83 e2 f8                  andq    $-8, %rdx
+100003dc6: 48 8d 04 52                  leaq    (%rdx,%rdx,2), %rax
+100003dca: 48 89 ca                     movq    %rcx, %rdx
+100003dcd: 48 29 c2                     subq    %rax, %rdx
+100003dd0: 41 8b 04 11                  movl    (%r9,%rdx), %eax
+100003dd4: 03 04 17                     addl    (%rdi,%rdx), %eax
+100003dd7: 44 01 f8                     addl    %r15d, %eax
+100003dda: 41 8b 14 31                  movl    (%r9,%rsi), %edx
+100003dde: 03 14 37                     addl    (%rdi,%rsi), %edx
+100003de1: 44 8d 3c 10                  leal    (%rax,%rdx), %r15d
+100003de5: 41 83 c7 02                  addl    $2, %r15d
+100003de9: 49 83 c5 10                  addq    $16, %r13
+100003ded: 48 83 c3 02                  addq    $2, %rbx
+100003df1: 48 83 c1 10                  addq    $16, %rcx
+100003df5: 49 83 c4 02                  addq    $2, %r12
+100003df9: 41 83 c6 fe                  addl    $-2, %r14d
+100003dfd: 75 a1                        jne     0x100003da0 <_main+0x50>
+100003dff: 49 89 fd                     movq    %rdi, %r13
+100003e02: e8 e3 00 00 00               callq   0x100003eea <_printf+0x100003eea>
+100003e07: 49 89 c4                     movq    %rax, %r12
+100003e0a: 41 be 80 96 98 00            movl    $10000000, %r14d        ## imm = 0x989680
+100003e10: 31 db                        xorl    %ebx, %ebx
+100003e12: e8 d3 00 00 00               callq   0x100003eea <_printf+0x100003eea>
+100003e17: 4d 89 ea                     movq    %r13, %r10
+100003e1a: 4c 8d 0d 1f 01 00 00         leaq    287(%rip), %r9          ## 0x100003f40 <_printf+0x100003f40>
+100003e21: 49 b8 ab aa aa aa aa aa aa aa        movabsq $-6148914691236517205, %r8 ## imm = 0xAAAAAAAAAAAAAAAB
+100003e2b: 49 89 c5                     movq    %rax, %r13
+100003e2e: 31 f6                        xorl    %esi, %esi
+100003e30: 48 89 d8                     movq    %rbx, %rax
+100003e33: 49 f7 e0                     mulq    %r8
+100003e36: 48 c1 e2 02                  shlq    $2, %rdx
+100003e3a: 48 83 e2 f8                  andq    $-8, %rdx
+100003e3e: 48 8d 04 52                  leaq    (%rdx,%rdx,2), %rax
+100003e42: 48 89 f1                     movq    %rsi, %rcx
+100003e45: 48 29 c1                     subq    %rax, %rcx
+100003e48: 49 8b 04 09                  movq    (%r9,%rcx), %rax
+100003e4c: 49 8b 14 0a                  movq    (%r10,%rcx), %rdx
+100003e50: 48 0f bc c8                  bsfq    %rax, %rcx
+100003e54: 48 0f bc fa                  bsfq    %rdx, %rdi
+100003e58: 29 f9                        subl    %edi, %ecx
+100003e5a: bf 01 00 00 00               movl    $1, %edi
+100003e5f: 48 d3 e7                     shlq    %cl, %rdi
+100003e62: 01 c2                        addl    %eax, %edx
+100003e64: 01 d7                        addl    %edx, %edi
+100003e66: 41 01 ff                     addl    %edi, %r15d
+100003e69: 48 83 c6 08                  addq    $8, %rsi
+100003e6d: 48 ff c3                     incq    %rbx
+100003e70: 41 ff ce                     decl    %r14d
+100003e73: 75 bb                        jne     0x100003e30 <_main+0xe0>
+100003e75: e8 70 00 00 00               callq   0x100003eea <_printf+0x100003eea>
+100003e7a: 4d 01 ec                     addq    %r13, %r12
+100003e7d: 48 8b 4d d0                  movq    -48(%rbp), %rcx
+100003e81: 4c 29 e1                     subq    %r12, %rcx
+100003e84: 48 01 c1                     addq    %rax, %rcx
+100003e87: 66 48 0f 6e c9               movq    %rcx, %xmm1
+100003e8c: 66 0f 62 0d 6c 00 00 00      punpckldq       108(%rip), %xmm1 ## xmm1 = xmm1[0],mem[0],xmm1[1],mem[1]
+                                                                        ## 0x100003f00 <_printf+0x100003f00>
+100003e94: 66 0f 5c 0d 74 00 00 00      subpd   116(%rip), %xmm1        ## 0x100003f10 <_printf+0x100003f10>
+100003e9c: 66 0f 28 c1                  movapd  %xmm1, %xmm0
+100003ea0: 66 0f 15 c1                  unpckhpd        %xmm1, %xmm0            ## xmm0 = xmm0[1],xmm1[1]
+100003ea4: f2 0f 58 c1                  addsd   %xmm1, %xmm0
+100003ea8: f2 0f 5e 05 70 00 00 00      divsd   112(%rip), %xmm0        ## 0x100003f20 <_printf+0x100003f20>
+100003eb0: f2 0f 10 0d 70 00 00 00      movsd   112(%rip), %xmm1        ## xmm1 = mem[0],zero
+                                                                        ## 0x100003f28 <_printf+0x100003f28>
+100003eb8: f2 0f 59 c8                  mulsd   %xmm0, %xmm1
+100003ebc: f2 0f 5e 0d 6c 00 00 00      divsd   108(%rip), %xmm1        ## 0x100003f30 <_printf+0x100003f30>
+100003ec4: 48 8d 3d ad 00 00 00         leaq    173(%rip), %rdi         ## 0x100003f78 <_printf+0x100003f78>
+100003ecb: be 80 96 98 00               movl    $10000000, %esi         ## imm = 0x989680
+100003ed0: b0 02                        movb    $2, %al
+100003ed2: e8 19 00 00 00               callq   0x100003ef0 <_printf+0x100003ef0>
+100003ed7: 44 89 f8                     movl    %r15d, %eax
+100003eda: 48 83 c4 08                  addq    $8, %rsp
+100003ede: 5b                           popq    %rbx
+100003edf: 41 5c                        popq    %r12
+100003ee1: 41 5d                        popq    %r13
+100003ee3: 41 5e                        popq    %r14
+100003ee5: 41 5f                        popq    %r15
+100003ee7: 5d                           popq    %rbp
+100003ee8: c3                           retq
+
+Disassembly of section __TEXT,__stubs:
+
+0000000100003eea <__stubs>:
+100003eea: ff 25 10 01 00 00            jmpq    *272(%rip)              ## 0x100004000 <_printf+0x100004000>
+100003ef0: ff 25 12 01 00 00            jmpq    *274(%rip)              ## 0x100004008 <_printf+0x100004008>
+
