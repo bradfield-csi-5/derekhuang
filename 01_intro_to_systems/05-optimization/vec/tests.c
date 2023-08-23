@@ -3,18 +3,19 @@
 #include "vec.h"
 
 extern data_t dotproduct(vec_ptr, vec_ptr);
+extern data_t dotproduct_mov_len(vec_ptr, vec_ptr);
+extern data_t dotproduct_direct_access(vec_ptr, vec_ptr);
+extern data_t dotproduct_loop_unroll_2x1(vec_ptr, vec_ptr);
 
-void setUp(void) {
-}
+void setUp(void) {}
 
-void tearDown(void) {
-}
+void tearDown(void) {}
 
 void test_empty(void) {
   vec_ptr u = new_vec(0);
   vec_ptr v = new_vec(0);
 
-  TEST_ASSERT_EQUAL(0, dotproduct(u, v));
+  TEST_ASSERT_EQUAL(0, dotproduct_loop_unroll_2x1(u, v));
 
   free_vec(u);
   free_vec(v);
@@ -31,7 +32,7 @@ void test_basic(void) {
   set_vec_element(v, 1, 5);
   set_vec_element(v, 2, 6);
 
-  TEST_ASSERT_EQUAL(32, dotproduct(u, v));
+  TEST_ASSERT_EQUAL(32, dotproduct_loop_unroll_2x1(u, v));
 
   free_vec(u);
   free_vec(v);
@@ -48,18 +49,18 @@ void test_longer(void) {
   }
 
   long expected = (2 * n * n * n + 3 * n * n + n) / 6;
-  TEST_ASSERT_EQUAL(expected, dotproduct(u, v));
+  TEST_ASSERT_EQUAL(expected, dotproduct_loop_unroll_2x1(u, v));
 
   free_vec(u);
   free_vec(v);
 }
 
 int main(void) {
-    UNITY_BEGIN();
+  UNITY_BEGIN();
 
-    RUN_TEST(test_empty);
-    RUN_TEST(test_basic);
-    RUN_TEST(test_longer);
+  RUN_TEST(test_empty);
+  RUN_TEST(test_basic);
+  RUN_TEST(test_longer);
 
-    return UNITY_END();
+  return UNITY_END();
 }
