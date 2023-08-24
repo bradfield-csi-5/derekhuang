@@ -1,22 +1,14 @@
 #include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <time.h>
 
 #define TEST_LOOPS 10000000
 
-// NOTE: we know that memory_size and page_size are both powers of 2, so one
-// divides the other
-
 uint64_t pagecount(uint64_t memory_size, uint64_t page_size) {
-  uint64_t a = __builtin_ffsl(memory_size);
-  uint64_t b = __builtin_ffsl(page_size);
-  // printf("%llu %llu %llu %llu\n", memory_size, page_size, a, b);
-  // printf("%llu, %llu\n", memory_size / page_size, 1LLU << (a - b));
-  return 1LLU << (a - b);
+  return memory_size / page_size;
 }
 
-int main(int argc, char **argv) {
+int main (int argc, char** argv) {
   clock_t baseline_start, baseline_end, test_start, test_end;
   uint64_t memory_size, page_size;
   double clocks_elapsed, time_elapsed;
