@@ -3,38 +3,7 @@
 #include <stdio.h>
 #include <time.h>
 
-#define TEST_LOOPS 10000
-
-void benchmark(long n, data_t (*f)(vec_ptr, vec_ptr), char *func_name) {
-  clock_t baseline_start, baseline_end, test_start, test_end;
-  double clocks_elapsed, time_elapsed;
-
-  baseline_start = clock();
-  int i;
-  vec_ptr u = new_vec(n);
-  vec_ptr v = new_vec(n);
-
-  for (long i = 0; i < n; i++) {
-    set_vec_element(u, i, i + 1);
-    set_vec_element(v, i, i + 1);
-  }
-
-  for (i = 0; i < TEST_LOOPS; i++) {
-  }
-  baseline_end = clock();
-
-  test_start = clock();
-  for (i = 0; i < TEST_LOOPS; i++) {
-    (*f)(u, v);
-  }
-  test_end = clock();
-
-  clocks_elapsed = test_end - test_start - (baseline_end - baseline_start);
-  time_elapsed = clocks_elapsed / CLOCKS_PER_SEC;
-
-  printf("%s -> %.2fs to run %d tests (%.2fns per test)\n", func_name,
-         time_elapsed, TEST_LOOPS, time_elapsed * 1e9 / TEST_LOOPS);
-}
+const long TEST_LOOPS = 10000;
 
 data_t dotproduct(vec_ptr u, vec_ptr v) {
   data_t sum = 0, u_val, v_val;
@@ -165,14 +134,4 @@ data_t dotproduct_loop_unroll_10x10(vec_ptr u, vec_ptr v) {
     sum0 += vec_u[i] * vec_v[i];
   }
   return sum0 + sum1 + sum2 + sum3 + sum4 + sum5 + sum6 + sum7 + sum8 + sum9;
-}
-
-int main(int argc, char **argv) {
-  benchmark(TEST_LOOPS, dotproduct, "original");
-  benchmark(TEST_LOOPS, dotproduct_mov_len, "mov_len");
-  benchmark(TEST_LOOPS, dotproduct_direct_access, "direct_access");
-  benchmark(TEST_LOOPS, dotproduct_loop_unroll_2x1, "loop_unroll_2x1");
-  benchmark(TEST_LOOPS, dotproduct_loop_unroll_2x2, "loop_unroll_2x2");
-  benchmark(TEST_LOOPS, dotproduct_loop_unroll_3x3, "loop_unroll_3x3");
-  benchmark(TEST_LOOPS, dotproduct_loop_unroll_10x10, "loop_unroll_10x10");
 }
