@@ -1,0 +1,9 @@
+goos: darwin
+goarch: amd64
+pkg: bradfield/01_intro_to_systems/07-memory-hierarchy-2/metrics
+cpu: Intel(R) Core(TM) i5-8279U CPU @ 2.40GHz
+BenchmarkMetrics/Average_age-8               309           3635641 ns/op
+BenchmarkMetrics/Average_payment-8            52          23405930 ns/op
+BenchmarkMetrics/Payment_stddev-8             26          41387671 ns/op
+PASS
+ok      bradfield/01_intro_to_systems/07-memory-hierarchy-2/metrics     5.077s
