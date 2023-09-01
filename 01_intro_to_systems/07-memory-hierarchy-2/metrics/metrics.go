@@ -11,11 +11,8 @@ import (
 type UserId int
 
 type DollarAmount struct {
-	dollars, cents uint64
-}
-
-type Payment struct {
-	amount DollarAmount
+	dollars uint64
+    cents float64
 }
 
 func AverageAge(userAges []float64) float64 {
@@ -27,31 +24,29 @@ func AverageAge(userAges []float64) float64 {
 	return average / count
 }
 
-func AveragePaymentAmount(payments []Payment) float64 {
-	average, total_cents := 0.0, 0.0
+func AveragePaymentAmount(payments []DollarAmount) float64 {
+	average:= 0.0
     count := float64(len(payments))
     for _, p := range payments {
-        amount := float64(p.amount.dollars)
-        total_cents += float64(p.amount.cents)
-        average += amount
+        average += float64(p.dollars) + p.cents
     }
-	return average / count + (total_cents / (count * 100))
+	return average / count
 }
 
 // Compute the standard deviation of payment amounts
-func StdDevPaymentAmount(payments []Payment) float64 {
-	mean := AveragePaymentAmount(payments)
+func StdDevPaymentAmount(payments []DollarAmount) float64 {
+	avg := AveragePaymentAmount(payments)
 	squaredDiffs := 0.0
     count := float64(len(payments))
     for _, p := range payments {
-        amount := float64(p.amount.dollars) + float64(p.amount.cents)/100
-        diff := amount - mean
+        amount := float64(p.dollars) + p.cents
+        diff := amount - avg
         squaredDiffs += diff * diff
     }
 	return math.Sqrt(squaredDiffs / count)
 }
 
-func LoadData() ([]float64, []Payment) {
+func LoadData() ([]float64, []DollarAmount) {
 	f, err := os.Open("users.csv")
 	if err != nil {
 		log.Fatalln("Unable to read users.csv", err)
@@ -64,7 +59,6 @@ func LoadData() ([]float64, []Payment) {
 
     var userAges []float64
 	for _, line := range userLines {
-		// age, _ := strconv.Atoi(line[2])
 		age, _ := strconv.ParseFloat(line[2], 64)
         userAges = append(userAges, age)
 	}
@@ -79,12 +73,13 @@ func LoadData() ([]float64, []Payment) {
 		log.Fatalln("Unable to parse payments.csv as csv", err)
 	}
 
-    var payments []Payment
+    var payments []DollarAmount
 	for _, line := range paymentLines {
 		paymentCents, _ := strconv.Atoi(line[0])
-        payments = append(payments, Payment{
-			DollarAmount{uint64(paymentCents / 100), uint64(paymentCents % 100)},
-		})
+        payments = append(payments, DollarAmount{
+            uint64(paymentCents / 100),
+            float64(paymentCents % 100) / 100,
+        })
 	}
 
     return userAges, payments
