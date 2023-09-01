@@ -19,18 +19,18 @@ type Payment struct {
 }
 
 func AverageAge(userAges []float64) float64 {
-	average, count := 0.0, 0.0
+	average := 0.0
+    count := float64(len(userAges))
 	for _, age := range userAges {
-		count += 1
 		average += age
 	}
 	return average / count
 }
 
 func AveragePaymentAmount(payments []Payment) float64 {
-	average, count, total_cents := 0.0, 0.0, 0.0
+	average, total_cents := 0.0, 0.0
+    count := float64(len(payments))
     for _, p := range payments {
-        count += 1
         amount := float64(p.amount.dollars)
         total_cents += float64(p.amount.cents)
         average += amount
@@ -41,9 +41,9 @@ func AveragePaymentAmount(payments []Payment) float64 {
 // Compute the standard deviation of payment amounts
 func StdDevPaymentAmount(payments []Payment) float64 {
 	mean := AveragePaymentAmount(payments)
-	squaredDiffs, count := 0.0, 0.0
+	squaredDiffs := 0.0
+    count := float64(len(payments))
     for _, p := range payments {
-        count += 1
         amount := float64(p.amount.dollars) + float64(p.amount.cents)/100
         diff := amount - mean
         squaredDiffs += diff * diff
