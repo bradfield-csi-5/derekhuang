@@ -1,3 +1,4 @@
+# unoptimized
 goos: darwin
 goarch: amd64
 pkg: bradfield/01_intro_to_systems/07-memory-hierarchy-2/metrics
@@ -7,3 +8,19 @@ BenchmarkMetrics/Average_payment-8            52          23405930 ns/op
 BenchmarkMetrics/Payment_stddev-8             26          41387671 ns/op
 PASS
 ok      bradfield/01_intro_to_systems/07-memory-hierarchy-2/metrics     5.077s
+
+
+# move division out of loops in avg age and avg payment
+BenchmarkMetrics/Average_age-8               318           3524486 ns/op
+BenchmarkMetrics/Average_payment-8            58          20973523 ns/op
+BenchmarkMetrics/Payment_stddev-8             28          42251503 ns/op
+PASS
+ok      bradfield/01_intro_to_systems/07-memory-hierarchy-2/metrics     5.213s
+
+
+# remove redundant fields
+BenchmarkMetrics/Average_age-8               436           2326413 ns/op
+BenchmarkMetrics/Average_payment-8            60          17591209 ns/op
+BenchmarkMetrics/Payment_stddev-8             33          35376082 ns/op
+PASS
+ok      bradfield/01_intro_to_systems/07-memory-hierarchy-2/metrics     5.377s

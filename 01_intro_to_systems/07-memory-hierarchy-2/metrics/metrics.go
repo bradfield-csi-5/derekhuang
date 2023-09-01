@@ -6,16 +6,10 @@ import (
 	"math"
 	"os"
 	"strconv"
-	"time"
 )
 
 type UserId int
 type UserMap map[UserId]*User
-
-type Address struct {
-	fullAddress string
-	zip         int
-}
 
 type DollarAmount struct {
 	dollars, cents uint64
@@ -23,14 +17,11 @@ type DollarAmount struct {
 
 type Payment struct {
 	amount DollarAmount
-	time   time.Time
 }
 
 type User struct {
 	id       UserId
-	name     string
 	age      int
-	address  Address
 	payments []Payment
 }
 
@@ -38,21 +29,22 @@ func AverageAge(users UserMap) float64 {
 	average, count := 0.0, 0.0
 	for _, u := range users {
 		count += 1
-		average += (float64(u.age) - average) / count
+		average += float64(u.age)
 	}
-	return average
+	return average / count
 }
 
 func AveragePaymentAmount(users UserMap) float64 {
-	average, count := 0.0, 0.0
+	average, count, total_cents := 0.0, 0.0, 0.0
 	for _, u := range users {
 		for _, p := range u.payments {
 			count += 1
-			amount := float64(p.amount.dollars) + float64(p.amount.cents)/100
-			average += (amount - average) / count
+			amount := float64(p.amount.dollars)
+            total_cents += float64(p.amount.cents)
+			average += amount
 		}
 	}
-	return average
+	return average / count + (total_cents / (count * 100))
 }
 
 // Compute the standard deviation of payment amounts
@@ -84,11 +76,8 @@ func LoadData() UserMap {
 	users := make(UserMap, len(userLines))
 	for _, line := range userLines {
 		id, _ := strconv.Atoi(line[0])
-		name := line[1]
 		age, _ := strconv.Atoi(line[2])
-		address := line[3]
-		zip, _ := strconv.Atoi(line[3])
-		users[UserId(id)] = &User{UserId(id), name, age, Address{address, zip}, []Payment{}}
+		users[UserId(id)] = &User{UserId(id), age, []Payment{}}
 	}
 
 	f, err = os.Open("payments.csv")
@@ -104,10 +93,8 @@ func LoadData() UserMap {
 	for _, line := range paymentLines {
 		userId, _ := strconv.Atoi(line[2])
 		paymentCents, _ := strconv.Atoi(line[0])
-		datetime, _ := time.Parse(time.RFC3339, line[1])
 		users[UserId(userId)].payments = append(users[UserId(userId)].payments, Payment{
 			DollarAmount{uint64(paymentCents / 100), uint64(paymentCents % 100)},
-			datetime,
 		})
 	}
 
