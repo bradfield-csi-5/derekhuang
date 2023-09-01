@@ -50,3 +50,12 @@ BenchmarkMetrics/Payment_stddev_alt-8        421           2446682 ns/op
 PASS
 ok      bradfield/01_intro_to_systems/07-memory-hierarchy-2/metrics     6.818s
 
+
+# avg age and avg payment loop unrolling
+BenchmarkMetrics/Average_age-8             41330             28282 ns/op
+BenchmarkMetrics/Average_payment-8           900           1270661 ns/op
+BenchmarkMetrics/Payment_stddev-8            459           2573952 ns/op
+BenchmarkMetrics/Payment_stddev_alt-8        464           2558927 ns/op
+PASS
+ok      bradfield/01_intro_to_systems/07-memory-hierarchy-2/metrics     6.183s
+

@@ -15,22 +15,33 @@ type DollarAmount struct {
     cents float64
 }
 
-func AverageAge(userAges []float64) float64 {
+func AverageAge(ages []float64) float64 {
 	average := 0.0
-    count := float64(len(userAges))
-	for _, age := range userAges {
-		average += age
+    count := len(ages)
+    var i int
+    for i = 0; i < count - 3; i += 4 {
+        average += ages[i] + ages[i+1] + ages[i+2] + ages[i+3]
+    }
+	for ; i < count; i++ {
+		average += ages[i]
 	}
-	return average / count
+	return average / float64(count)
 }
 
 func AveragePaymentAmount(payments []DollarAmount) float64 {
-	average:= 0.0
-    count := float64(len(payments))
-    for _, p := range payments {
-        average += float64(p.dollars) + p.cents
+	average := 0.0
+    count := len(payments)
+    var i int
+    for i = 0; i < count - 3; i += 4 {
+        average += float64(payments[i].dollars) + payments[i].cents
+        average += float64(payments[i+1].dollars) + payments[i+1].cents
+        average += float64(payments[i+2].dollars) + payments[i+2].cents
+        average += float64(payments[i+3].dollars) + payments[i+3].cents
     }
-	return average / count
+	for ; i < count; i++ {
+		average += float64(payments[i].dollars) + payments[i].cents
+	}
+	return average / float64(count)
 }
 
 // Compute the standard deviation of payment amounts
@@ -68,10 +79,10 @@ func LoadData() ([]float64, []DollarAmount) {
 		log.Fatalln("Unable to parse users.csv as csv", err)
 	}
 
-    var userAges []float64
+    var ages []float64
 	for _, line := range userLines {
 		age, _ := strconv.ParseFloat(line[2], 64)
-        userAges = append(userAges, age)
+        ages = append(ages, age)
 	}
 
 	f, err = os.Open("payments.csv")
@@ -93,5 +104,5 @@ func LoadData() ([]float64, []DollarAmount) {
         })
 	}
 
-    return userAges, payments
+    return ages, payments
 }
