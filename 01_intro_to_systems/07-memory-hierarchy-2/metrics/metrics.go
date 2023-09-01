@@ -9,7 +9,6 @@ import (
 )
 
 type UserId int
-type UserMap map[UserId]*User
 
 type DollarAmount struct {
 	dollars, cents uint64
@@ -19,16 +18,11 @@ type Payment struct {
 	amount DollarAmount
 }
 
-type User struct {
-	id       UserId
-	age      int
-}
-
-func AverageAge(users []User) float64 {
+func AverageAge(userAges []float64) float64 {
 	average, count := 0.0, 0.0
-	for _, u := range users {
+	for _, age := range userAges {
 		count += 1
-		average += float64(u.age)
+		average += age
 	}
 	return average / count
 }
@@ -57,7 +51,7 @@ func StdDevPaymentAmount(payments []Payment) float64 {
 	return math.Sqrt(squaredDiffs / count)
 }
 
-func LoadData() ([]User, []Payment) {
+func LoadData() ([]float64, []Payment) {
 	f, err := os.Open("users.csv")
 	if err != nil {
 		log.Fatalln("Unable to read users.csv", err)
@@ -68,11 +62,11 @@ func LoadData() ([]User, []Payment) {
 		log.Fatalln("Unable to parse users.csv as csv", err)
 	}
 
-    var users []User
+    var userAges []float64
 	for _, line := range userLines {
-		id, _ := strconv.Atoi(line[0])
-		age, _ := strconv.Atoi(line[2])
-        users = append(users, User{UserId(id), age})
+		// age, _ := strconv.Atoi(line[2])
+		age, _ := strconv.ParseFloat(line[2], 64)
+        userAges = append(userAges, age)
 	}
 
 	f, err = os.Open("payments.csv")
@@ -93,5 +87,5 @@ func LoadData() ([]User, []Payment) {
 		})
 	}
 
-    return users, payments
+    return userAges, payments
 }
