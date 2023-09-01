@@ -42,4 +42,15 @@ func BenchmarkMetrics(b *testing.B) {
 		}
 	})
 
+	b.Run("Payment stddev alt", func(b *testing.B) {
+		actual := 0.0
+		for n := 0; n < b.N; n++ {
+			actual = StdDevPaymentAmountAltVariance(payments)
+		}
+		expected := 288684.850
+		if math.IsNaN(actual) || math.Abs(actual-expected) > 0.01 {
+			b.Fatalf("Expected standard deviation to be around %.2f, not %.3f", expected, actual)
+		}
+	})
+
 }

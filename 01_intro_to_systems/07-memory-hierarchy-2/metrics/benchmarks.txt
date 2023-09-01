@@ -33,3 +33,20 @@ BenchmarkMetrics/Payment_stddev-8            301           3669516 ns/op
 PASS
 ok      bradfield/01_intro_to_systems/07-memory-hierarchy-2/metrics     5.541s
 
+
+# get rid of Payment and calculate cents in LoadData()
+BenchmarkMetrics/Average_age-8             10000            103823 ns/op
+BenchmarkMetrics/Average_payment-8           890           1265471 ns/op
+BenchmarkMetrics/Payment_stddev-8            466           2531160 ns/op
+PASS
+ok      bradfield/01_intro_to_systems/07-memory-hierarchy-2/metrics     4.323s
+
+
+# stddev alternate variance calculation
+BenchmarkMetrics/Average_age-8             12004             99545 ns/op
+BenchmarkMetrics/Average_payment-8           940           1223337 ns/op
+BenchmarkMetrics/Payment_stddev-8            475           2505765 ns/op
+BenchmarkMetrics/Payment_stddev_alt-8        421           2446682 ns/op
+PASS
+ok      bradfield/01_intro_to_systems/07-memory-hierarchy-2/metrics     6.818s
+

@@ -46,6 +46,17 @@ func StdDevPaymentAmount(payments []DollarAmount) float64 {
 	return math.Sqrt(squaredDiffs / count)
 }
 
+func StdDevPaymentAmountAltVariance(payments []DollarAmount) float64 {
+    avg := AveragePaymentAmount(payments)
+    total := 0.0
+    count := float64(len(payments))
+    for _, p := range payments {
+        amount := float64(p.dollars) + p.cents
+        total += amount * amount
+    }
+    return math.Sqrt((total / count) - (avg * avg))
+}
+
 func LoadData() ([]float64, []DollarAmount) {
 	f, err := os.Open("users.csv")
 	if err != nil {
