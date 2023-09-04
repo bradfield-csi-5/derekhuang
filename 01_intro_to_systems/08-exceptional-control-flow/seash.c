@@ -7,7 +7,7 @@ int main(int argc, char **argv) {
   char cmdline[MAXLINE];
 
   while (1) {
-    printf("\U0001F30A ");
+    printf("\U0001F41A ");
 
     Fgets(cmdline, MAXLINE, stdin);
 
