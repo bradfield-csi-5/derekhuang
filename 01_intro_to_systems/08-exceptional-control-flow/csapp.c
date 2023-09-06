@@ -23,3 +23,13 @@ char *Fgets(char *ptr, int n, FILE *stream) {
 
   return rptr;
 }
+
+pid_t Fork() {
+  pid_t pid;
+
+  if ((pid = fork()) < 0) {
+    unix_error("Fork error");
+  }
+
+  return pid;
+}
