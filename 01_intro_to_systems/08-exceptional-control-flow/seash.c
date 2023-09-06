@@ -82,6 +82,7 @@ int main(int argc, char **argv) {
     printf("%s ", SHELL);
 
     if (cmd_mode) {
+      // TODO: fix
       strcpy(cmdline, argv[optind]);
       eval(cmdline, true);
       exit(0);
