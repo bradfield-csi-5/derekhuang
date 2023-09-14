@@ -39,6 +39,12 @@ unsigned int ctoi(unsigned char *buf, int size) {
   return ret;
 }
 
+void print_mac_addr(unsigned char *buf, int size) {
+  while (size > 0) {
+    printf("%x ", *(buf + --size));
+  }
+}
+
 int main(int argc, char **argv) {
   FILE *fp;
   unsigned char *buf;
@@ -79,15 +85,32 @@ int main(int argc, char **argv) {
     // Skip the packet timestamp bytes
     buf += 8;
 
+    // Read the packet length and move the buffer forward
     packlen = ctoi(buf, PACKLEN_SIZE);
     buf += PACKLEN_SIZE;
 
+    // Read the un-truncated packet length and move the buffer forward
     full_packlen = ctoi(buf, FULL_PACKLEN_SIZE);
+    // This is important to jump to the start of the next packet
     buf += FULL_PACKLEN_SIZE;
 
     if (packlen != full_packlen) {
       printf("Partial packet captured: %d of %d\n", packlen, full_packlen);
     }
+
+    // Print MAC addresses, move buffer forward, and adjust packlen
+    printf("MAC destination: ");
+    print_mac_addr(buf, MAC_DEST_SIZE);
+    buf += MAC_DEST_SIZE;
+    packlen -= MAC_DEST_SIZE;
+    printf("\n");
+
+    printf("MAC destination: ");
+    print_mac_addr(buf, MAC_SRC_SIZE);
+    buf += MAC_SRC_SIZE;
+    packlen -= MAC_SRC_SIZE;
+    printf("\n");
+    printf("\n");
 
     buf += packlen;
 
