@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define FILE_HEADER_LEN 24
 #define PACKLEN_SIZE 4
 #define FULL_PACKLEN_SIZE 4
 #define MAC_DEST_SIZE 6
@@ -40,31 +41,41 @@ unsigned int ctoi(unsigned char *buf, int size) {
 
 int main(int argc, char **argv) {
   FILE *fp;
+  unsigned char *buf;
+  long filelen;
 
   if ((fp = fopen("net.cap", "r")) == NULL) {
     perror("Error opening file");
     return 1;
   }
 
+  // Move file pointer to the end of the file
   if (fseek(fp, 0, SEEK_END) != 0) {
     perror("Error jumping to end of file");
     return 1;
   }
 
-  unsigned char *buf;
-  long filelen = ftell(fp);
+  // Get the length of the file
+  filelen = ftell(fp);
+
+  // Move the file pointer back to the beginning of the file
   rewind(fp);
+
+  // Allocate the size of the file to the buffer
   buf = (unsigned char *)malloc(filelen * sizeof(unsigned char));
+
+  // Read the entire file into the buffer
   fread(buf, filelen, 1, fp);
 
-  // Skip per-file header
-  buf += 24;
-
+  int count = 0;
   unsigned int packlen = 0;
   unsigned int full_packlen = 0;
 
+  // Skip the per-file header
+  buf += FILE_HEADER_LEN;
+
   while (*buf) {
-    // Skip packet header timestamp bytes
+    // Skip the packet timestamp bytes
     buf += 8;
 
     packlen = ctoi(buf, PACKLEN_SIZE);
