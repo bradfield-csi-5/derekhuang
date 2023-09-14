@@ -1,9 +1,19 @@
 /*
+ * Per-file header: 24 bytes
+ * Per-packet header: 16 bytes
+ * Ethernet header: 14 bytes
+ * IPv4 header: 16 bytes
+ * TCP header: 16 bytes
+ *
  * The magic number is d4c3b2a1 -- byte-ordering is big-endian
  * Major version: 4
  * Minor version: 2
  * Snapshot length: 1514
  * Link-layer header type: 1 ethernet
+ * Ethertype: 0x800 (IPv4)
+ * MAC addresses:
+ *  - 28 60 87 84 e9 c4
+ *  - 1b 2e df 60 5e a4
  */
 
 #include <assert.h>
@@ -80,10 +90,10 @@ int main(int argc, char **argv) {
   unsigned char full_packlen_buf[FULL_PACKLEN_SIZE];
   unsigned int full_packlen;
 
-  char mac_dest[MAC_DEST_SIZE];
-  char mac_src[MAC_SRC_SIZE];
+  unsigned char mac_dest[MAC_DEST_SIZE];
+  unsigned char mac_src[MAC_SRC_SIZE];
 
-  char ethertype[ETHERTYPE_SIZE];
+  unsigned char ethertype[ETHERTYPE_SIZE];
 
   int nitems = 22;
   int count = 0;
@@ -104,6 +114,18 @@ int main(int argc, char **argv) {
 
     packlen = cbtoi(packlen_buf);
     full_packlen = cbtoi(full_packlen_buf);
+
+    printf("MAC destination: ");
+    for (int i = MAC_DEST_SIZE - 1; i >= 0; i--) {
+      printf("%x ", mac_dest[i]);
+    }
+    printf("\n");
+
+    printf("MAC source: ");
+    for (int i = MAC_SRC_SIZE - 1; i >= 0; i--) {
+      printf("%x ", mac_src[i]);
+    }
+    printf("\n\n");
 
     if (packlen != full_packlen) {
       printf("Partial packet: %d of %d\n", packlen, full_packlen);
