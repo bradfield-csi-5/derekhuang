@@ -49,6 +49,7 @@ int main(int argc, char **argv) {
     return 1;
   }
 
+  // Stolen from https://stackoverflow.com/a/22059317/5374314
   // Move file pointer to the end of the file
   if (fseek(fp, 0, SEEK_END) != 0) {
     perror("Error jumping to end of file");
