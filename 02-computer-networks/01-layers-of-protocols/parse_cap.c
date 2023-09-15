@@ -6,8 +6,8 @@
  * TCP header: 16 bytes
  *
  * The magic number is d4c3b2a1 -- byte-ordering is big-endian
- * Major version: 4
- * Minor version: 2
+ * Major version: 2
+ * Minor version: 4
  * Snapshot length: 1514
  * Link-layer header type: 1 ethernet
  * Ethertype: 0x800 (IPv4)
@@ -19,128 +19,196 @@
 #include <assert.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
-#define MAXLINE 1024
+#define FILE_HEADER_LEN 24
+
 #define PACKLEN_SIZE 4
 #define FULL_PACKLEN_SIZE 4
+
 #define MAC_DEST_SIZE 6
 #define MAC_SRC_SIZE 6
 #define ETHERTYPE_SIZE 2
+#define IPV4 0x8
+#define IPV6 0xdd86
 
-void print_byte(unsigned char buf[4], bool big_endian, bool decimal) {
+#define IP_TOTAL_LEN_OFFSET 2
+#define IP_TOTAL_LEN_SIZE 2
+#define IP_TOTAL_LEN_MIN 20
+#define IP_TOTAL_LEN_MAX 65535
+#define IP_TOTAL_LEN_TO_PROTOCOL_OFFSET 7
+#define IP_TCP_PROTOCOL 6
+#define IP_PROTOCOL_TO_SRC_OFFSET 3
+#define IP_SRC_SIZE 4
+#define IP_DEST_SIZE 4
+
+unsigned int ctoi(unsigned char *buf, int size, bool big_endian) {
+  int shift = 0;
+  unsigned int ret = 0;
   if (big_endian) {
-    for (int i = 0; i < 4; i++) {
-      if (buf[i] == 0) {
-        if (decimal) {
-          printf("%03d ", 0);
-        } else {
-          printf("%02x ", 0);
-        }
-      } else {
-        if (decimal) {
-          printf("%03d ", buf[i]);
-        } else {
-          printf("%02x ", buf[i]);
-        }
-      }
+    for (int i = size - 1; i >= 0; i--) {
+      ret |= *(buf + i) << shift;
+      shift += 8;
     }
   } else {
-    for (int i = 3; i >= 0; i--) {
-      if (buf[i] == 0) {
-        if (decimal) {
-          printf("%03d ", 0);
-        } else {
-          printf("%02x ", 0);
-        }
-      } else {
-        if (decimal) {
-          printf("%03d ", buf[i]);
-        } else {
-          printf("%02x ", buf[i]);
-        }
-      }
+    for (int i = 0; i < size; i++) {
+      ret |= *(buf + i) << shift;
+      shift += 8;
     }
-  }
-}
-
-unsigned int cbtoi(unsigned char buf[4]) {
-  int left_shift = 0;
-  int ret = 0;
-  for (int i = 0; i < 4; i++) {
-    ret |= buf[i] << left_shift;
-    left_shift += 8;
   }
   return ret;
 }
 
+void print_mac_addr(unsigned char *buf, int size) {
+  while (size > 0) {
+    printf("%x ", *(buf + --size));
+  }
+}
+
 int main(int argc, char **argv) {
   FILE *fp;
+  unsigned char *buf;
+  long filelen;
 
   if ((fp = fopen("net.cap", "r")) == NULL) {
     perror("Error opening file");
     return 1;
   }
 
-  char buf[MAXLINE];
+  // Stolen from https://stackoverflow.com/a/22059317/5374314
+  // Move file pointer to the end of the file
+  if (fseek(fp, 0, SEEK_END) != 0) {
+    perror("Error jumping to end of file");
+    return 1;
+  }
 
-  unsigned char packlen_buf[PACKLEN_SIZE];
-  unsigned int packlen;
+  // Get the length of the file
+  filelen = ftell(fp);
 
-  unsigned char full_packlen_buf[FULL_PACKLEN_SIZE];
-  unsigned int full_packlen;
+  // Move the file pointer back to the beginning of the file
+  rewind(fp);
 
-  unsigned char mac_dest[MAC_DEST_SIZE];
-  unsigned char mac_src[MAC_SRC_SIZE];
+  // Allocate the size of the file to the buffer
+  buf = (unsigned char *)malloc(filelen * sizeof(unsigned char));
 
-  unsigned char ethertype[ETHERTYPE_SIZE];
+  // Read the entire file into the buffer
+  fread(buf, filelen, 1, fp);
 
-  int nitems = 22;
   int count = 0;
 
-  // Packet length starts at byte 33
-  fseek(fp, 32, SEEK_CUR);
-  while (fread(buf, sizeof(char), nitems, fp)) {
-    // TODO: there has to be a better way...
-    memcpy(packlen_buf, buf, PACKLEN_SIZE);
-    memcpy(full_packlen_buf, buf + PACKLEN_SIZE, FULL_PACKLEN_SIZE);
-    memcpy(mac_dest, buf + PACKLEN_SIZE + FULL_PACKLEN_SIZE, MAC_DEST_SIZE);
-    memcpy(mac_src, buf + PACKLEN_SIZE + FULL_PACKLEN_SIZE + MAC_DEST_SIZE,
-           MAC_SRC_SIZE);
-    memcpy(ethertype,
-           buf + PACKLEN_SIZE + FULL_PACKLEN_SIZE + MAC_DEST_SIZE +
-               MAC_SRC_SIZE,
-           ETHERTYPE_SIZE);
+  unsigned int packlen;
+  unsigned int full_packlen;
 
-    packlen = cbtoi(packlen_buf);
-    full_packlen = cbtoi(full_packlen_buf);
+  unsigned int ethertype;
+  char *ethertype_str;
 
-    printf("MAC destination: ");
-    for (int i = MAC_DEST_SIZE - 1; i >= 0; i--) {
-      printf("%x ", mac_dest[i]);
-    }
+  unsigned char ip_ver;
+  unsigned char ip_header_len;
+  unsigned int ip_total_len;
+  unsigned int ip_src_addr;
+  unsigned int ip_dest_addr;
+
+  // Skip the per-file header
+  buf += FILE_HEADER_LEN;
+
+  while (*buf) {
+    count++;
+
+    // Skip the packet timestamp bytes
+    buf += 8;
+
+    printf("========== Packet %d ==========\n", count);
+    // Packet length which will be altered as different headers are parsed
+    // and used to jump to the next packet
+    packlen = ctoi(buf, PACKLEN_SIZE, false);
+    printf("Captured length: %d bytes\n", packlen);
+    buf += PACKLEN_SIZE;
+
+    // Un-truncated packet length
+    full_packlen = ctoi(buf, FULL_PACKLEN_SIZE, false);
+    printf("Untruncated length: %d bytes\n", full_packlen);
+    assert(packlen == full_packlen);
+
+    // This aligns each jump to the start of the next packet
+    buf += FULL_PACKLEN_SIZE;
     printf("\n");
 
+    printf("========== Ethernet Headers ==========\n");
+    printf("MAC destination: ");
+    print_mac_addr(buf, MAC_DEST_SIZE);
+    printf("\n");
+    buf += MAC_DEST_SIZE;
+    packlen -= MAC_DEST_SIZE;
+
     printf("MAC source: ");
-    for (int i = MAC_SRC_SIZE - 1; i >= 0; i--) {
-      printf("%x ", mac_src[i]);
-    }
-    printf("\n\n");
+    print_mac_addr(buf, MAC_SRC_SIZE);
+    printf("\n");
+    buf += MAC_SRC_SIZE;
+    packlen -= MAC_SRC_SIZE;
 
-    if (packlen != full_packlen) {
-      printf("Partial packet: %d of %d\n", packlen, full_packlen);
-    }
-
-    // Jump to the next packet length byte in the next header.
-    // Subtract 6 from packlen to offset the additional bytes being loaded into
-    // the buffer for the parts of the ethernet header we care about.
-    if (fseek(fp, packlen - 6, SEEK_CUR) != 0) {
-      perror("Error seeking");
+    ethertype = ctoi(buf, ETHERTYPE_SIZE, false);
+    if (ethertype == IPV4) {
+      ethertype_str = "IPv4";
+    } else if (ethertype == IPV6) {
+      ethertype_str = "IPv6";
+    } else {
+      printf("Neither IPv4 nor IPv6: %d 0x%x\n", ethertype, ethertype);
+      perror("Error parsing ethertype");
       return 1;
     }
+    printf("Ethertype: %s\n", ethertype_str);
+    buf += ETHERTYPE_SIZE;
+    packlen -= ETHERTYPE_SIZE;
+    printf("\n");
 
-    count++;
+    printf("========== IP Headers ==========\n");
+    // First 4 bits are version and last 4 bits are header length
+    ip_ver = *buf >> 4;
+    ip_header_len = *buf & 0x0f;
+    printf("IP version: %d\n", ip_ver);
+    printf("IP header size: %d (%d bytes long)\n", ip_header_len,
+           ip_header_len * 4);
+    assert(ip_ver == 4);
+    assert(ip_header_len == 5);
+    buf += IP_TOTAL_LEN_OFFSET;
+    packlen -= IP_TOTAL_LEN_OFFSET;
+
+    // IP total length and payload length
+    ip_total_len = ctoi(buf, IP_TOTAL_LEN_SIZE, true);
+    printf("IP total len: %d bytes\n", ip_total_len);
+    printf("IP payload len: %d bytes\n", ip_total_len - ip_header_len * 4);
+    assert((IP_TOTAL_LEN_MIN <= ip_total_len) &&
+           (ip_total_len <= IP_TOTAL_LEN_MAX));
+    buf += IP_TOTAL_LEN_TO_PROTOCOL_OFFSET;
+    packlen -= IP_TOTAL_LEN_TO_PROTOCOL_OFFSET;
+
+    // IP protocol
+    printf("IP protocol: %d\n", *buf);
+    assert(*buf == IP_TCP_PROTOCOL);
+    buf += IP_PROTOCOL_TO_SRC_OFFSET;
+    packlen -= IP_PROTOCOL_TO_SRC_OFFSET;
+
+    // IP source address
+    ip_src_addr = ctoi(buf, IP_SRC_SIZE, true);
+    printf("IP source address: 0x%x\n", ip_src_addr);
+    assert(ip_src_addr == 0xc0a80065 || ip_src_addr == 0xc01efc9a);
+    buf += IP_SRC_SIZE;
+    packlen -= IP_SRC_SIZE;
+
+    // IP destination address
+    ip_dest_addr = ctoi(buf, IP_DEST_SIZE, true);
+    printf("IP destination address: 0x%x\n", ip_dest_addr);
+    assert(ip_dest_addr == 0xc0a80065 || ip_dest_addr == 0xc01efc9a);
+    buf += IP_DEST_SIZE;
+    packlen -= IP_DEST_SIZE;
+    printf("\n");
+
+    // Jump to the next packet
+    buf += packlen;
+    printf("\n");
   }
+
   fclose(fp);
 
   printf("%d packets counted\n", count);
