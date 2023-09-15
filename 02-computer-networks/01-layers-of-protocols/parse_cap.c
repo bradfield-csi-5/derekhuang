@@ -234,8 +234,8 @@ int main(int argc, char **argv) {
     packlen -= TCP_SEQ_TO_DATA_OFFSET;
 
     tcp_data_offset = *buf >> 4;
-    printf("Header length: %d words (%d bytes)\n", tcp_data_offset,
-           tcp_data_offset * 4);
+    printf("Data offset (header length): %d words (%d bytes)\n",
+           tcp_data_offset, tcp_data_offset * 4);
     printf("\n");
 
     // Jump to the next packet
