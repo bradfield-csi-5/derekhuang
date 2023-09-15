@@ -43,6 +43,11 @@
 #define IP_SRC_SIZE 4
 #define IP_DEST_SIZE 4
 
+#define TCP_SRC_PORT_SIZE 2
+#define TCP_DEST_PORT_SIZE 2
+#define TCP_SEQ_NUM_SIZE 4
+#define TCP_SEQ_TO_DATA_OFFSET 8
+
 unsigned int ctoi(unsigned char *buf, int size, bool big_endian) {
   int shift = 0;
   unsigned int ret = 0;
@@ -105,10 +110,16 @@ int main(int argc, char **argv) {
 
   unsigned char ip_ver;
   unsigned char ip_header_len;
-  unsigned int ip_total_len;
+  unsigned short ip_total_len;
   unsigned int ip_src_addr;
   unsigned int ip_dest_addr;
 
+  unsigned short tcp_src_port;
+  unsigned short tcp_dest_port;
+  unsigned int tcp_seq_num;
+  unsigned char tcp_data_offset;
+
+  // TODO: parse file header and add assertions
   // Skip the per-file header
   buf += FILE_HEADER_LEN;
 
@@ -166,8 +177,8 @@ int main(int argc, char **argv) {
     // First 4 bits are version and last 4 bits are header length
     ip_ver = *buf >> 4;
     ip_header_len = *buf & 0x0f;
-    printf("IP version: %d\n", ip_ver);
-    printf("IP header size: %d (%d bytes long)\n", ip_header_len,
+    printf("Version: %d\n", ip_ver);
+    printf("Header length: %d words (%d bytes)\n", ip_header_len,
            ip_header_len * 4);
     assert(ip_ver == 4);
     assert(ip_header_len == 5);
@@ -176,32 +187,55 @@ int main(int argc, char **argv) {
 
     // IP total length and payload length
     ip_total_len = ctoi(buf, IP_TOTAL_LEN_SIZE, true);
-    printf("IP total len: %d bytes\n", ip_total_len);
-    printf("IP payload len: %d bytes\n", ip_total_len - ip_header_len * 4);
+    printf("Total length: %d bytes\n", ip_total_len);
+    printf("Payload length: %d bytes\n", ip_total_len - ip_header_len * 4);
     assert((IP_TOTAL_LEN_MIN <= ip_total_len) &&
            (ip_total_len <= IP_TOTAL_LEN_MAX));
     buf += IP_TOTAL_LEN_TO_PROTOCOL_OFFSET;
     packlen -= IP_TOTAL_LEN_TO_PROTOCOL_OFFSET;
 
     // IP protocol
-    printf("IP protocol: %d\n", *buf);
+    printf("Protocol: %d\n", *buf);
     assert(*buf == IP_TCP_PROTOCOL);
     buf += IP_PROTOCOL_TO_SRC_OFFSET;
     packlen -= IP_PROTOCOL_TO_SRC_OFFSET;
 
     // IP source address
     ip_src_addr = ctoi(buf, IP_SRC_SIZE, true);
-    printf("IP source address: 0x%x\n", ip_src_addr);
+    printf("Source address: 0x%x\n", ip_src_addr);
     assert(ip_src_addr == 0xc0a80065 || ip_src_addr == 0xc01efc9a);
     buf += IP_SRC_SIZE;
     packlen -= IP_SRC_SIZE;
 
     // IP destination address
     ip_dest_addr = ctoi(buf, IP_DEST_SIZE, true);
-    printf("IP destination address: 0x%x\n", ip_dest_addr);
+    printf("Destination address: 0x%x\n", ip_dest_addr);
     assert(ip_dest_addr == 0xc0a80065 || ip_dest_addr == 0xc01efc9a);
     buf += IP_DEST_SIZE;
     packlen -= IP_DEST_SIZE;
+    printf("\n");
+
+    printf("========== TCP Headers ==========\n");
+    tcp_src_port = ctoi(buf, TCP_SRC_PORT_SIZE, true);
+    printf("Source port: %d\n", tcp_src_port);
+    assert(tcp_src_port == 80 || tcp_src_port == 59295);
+    buf += TCP_SRC_PORT_SIZE;
+    packlen -= TCP_SRC_PORT_SIZE;
+
+    tcp_dest_port = ctoi(buf, TCP_DEST_PORT_SIZE, true);
+    printf("Destination port: %d\n", tcp_dest_port);
+    assert(tcp_dest_port == 80 || tcp_dest_port == 59295);
+    buf += TCP_DEST_PORT_SIZE;
+    packlen -= TCP_DEST_PORT_SIZE;
+
+    tcp_seq_num = ctoi(buf, TCP_SEQ_NUM_SIZE, true);
+    printf("Sequence number: %d\n", tcp_seq_num);
+    buf += TCP_SEQ_TO_DATA_OFFSET;
+    packlen -= TCP_SEQ_TO_DATA_OFFSET;
+
+    tcp_data_offset = *buf >> 4;
+    printf("Header length: %d words (%d bytes)\n", tcp_data_offset,
+           tcp_data_offset * 4);
     printf("\n");
 
     // Jump to the next packet
