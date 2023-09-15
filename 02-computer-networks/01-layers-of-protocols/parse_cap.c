@@ -33,12 +33,29 @@
 #define IPV4 0x8
 #define IPV6 0xdd86
 
-unsigned int ctoi(unsigned char *buf, int size) {
+#define IP_TOTAL_LEN_OFFSET 2
+#define IP_TOTAL_LEN_SIZE 2
+#define IP_TOTAL_LEN_MIN 20
+#define IP_TOTAL_LEN_MAX 65535
+#define IP_TOTAL_LEN_TO_PROTOCOL_OFFSET 7
+#define IP_TCP_PROTOCOL 6
+#define IP_PROTOCOL_TO_SRC_OFFSET 3
+#define IP_SRC_SIZE 4
+#define IP_DEST_SIZE 4
+
+unsigned int ctoi(unsigned char *buf, int size, bool big_endian) {
   int shift = 0;
   unsigned int ret = 0;
-  for (int i = 0; i < size; i++) {
-    ret |= *(buf++) << shift;
-    shift += 8;
+  if (big_endian) {
+    for (int i = size - 1; i >= 0; i--) {
+      ret |= *(buf + i) << shift;
+      shift += 8;
+    }
+  } else {
+    for (int i = 0; i < size; i++) {
+      ret |= *(buf + i) << shift;
+      shift += 8;
+    }
   }
   return ret;
 }
@@ -86,8 +103,11 @@ int main(int argc, char **argv) {
   unsigned int ethertype;
   char *ethertype_str;
 
-  /* unsigned char ip_ver; */
-  /* unsigned char ip_header_len; */
+  unsigned char ip_ver;
+  unsigned char ip_header_len;
+  unsigned int ip_total_len;
+  unsigned int ip_src_addr;
+  unsigned int ip_dest_addr;
 
   // Skip the per-file header
   buf += FILE_HEADER_LEN;
@@ -99,38 +119,41 @@ int main(int argc, char **argv) {
     buf += 8;
 
     printf("========== Packet %d ==========\n", count);
-    // Read the packet length and move the buffer forward
-    packlen = ctoi(buf, PACKLEN_SIZE);
-    printf("Captured length: %d\n", packlen);
+    // Packet length which will be altered as different headers are parsed
+    // and used to jump to the next packet
+    packlen = ctoi(buf, PACKLEN_SIZE, false);
+    printf("Captured length: %d bytes\n", packlen);
     buf += PACKLEN_SIZE;
 
-    // Read the un-truncated packet length and move the buffer forward
-    full_packlen = ctoi(buf, FULL_PACKLEN_SIZE);
-    printf("Untruncated length: %d\n", full_packlen);
-    // This is important to jump to the start of the next packet
+    // Un-truncated packet length
+    full_packlen = ctoi(buf, FULL_PACKLEN_SIZE, false);
+    printf("Untruncated length: %d bytes\n", full_packlen);
+    assert(packlen == full_packlen);
+
+    // This aligns each jump to the start of the next packet
     buf += FULL_PACKLEN_SIZE;
     printf("\n");
 
     printf("========== Ethernet Headers ==========\n");
-    // Print MAC addresses, move buffer forward, and adjust packlen
     printf("MAC destination: ");
     print_mac_addr(buf, MAC_DEST_SIZE);
+    printf("\n");
     buf += MAC_DEST_SIZE;
     packlen -= MAC_DEST_SIZE;
-    printf("\n");
 
     printf("MAC source: ");
     print_mac_addr(buf, MAC_SRC_SIZE);
+    printf("\n");
     buf += MAC_SRC_SIZE;
     packlen -= MAC_SRC_SIZE;
-    printf("\n");
 
-    ethertype = ctoi(buf, ETHERTYPE_SIZE);
+    ethertype = ctoi(buf, ETHERTYPE_SIZE, false);
     if (ethertype == IPV4) {
       ethertype_str = "IPv4";
     } else if (ethertype == IPV6) {
       ethertype_str = "IPv6";
     } else {
+      printf("Neither IPv4 nor IPv6: %d 0x%x\n", ethertype, ethertype);
       perror("Error parsing ethertype");
       return 1;
     }
@@ -140,14 +163,49 @@ int main(int argc, char **argv) {
     printf("\n");
 
     printf("========== IP Headers ==========\n");
-    printf("IP version: %d\n", *buf >> 4);
-    printf("IP header length: %d\n", *buf & 0xf0);
-    buf += 1;
-    packlen -= 1;
+    // First 4 bits are version and last 4 bits are header length
+    ip_ver = *buf >> 4;
+    ip_header_len = *buf & 0x0f;
+    printf("IP version: %d\n", ip_ver);
+    printf("IP header size: %d (%d bytes long)\n", ip_header_len,
+           ip_header_len * 4);
+    assert(ip_ver == 4);
+    assert(ip_header_len == 5);
+    buf += IP_TOTAL_LEN_OFFSET;
+    packlen -= IP_TOTAL_LEN_OFFSET;
+
+    // IP total length and payload length
+    ip_total_len = ctoi(buf, IP_TOTAL_LEN_SIZE, true);
+    printf("IP total len: %d bytes\n", ip_total_len);
+    printf("IP payload len: %d bytes\n", ip_total_len - ip_header_len * 4);
+    assert((IP_TOTAL_LEN_MIN <= ip_total_len) &&
+           (ip_total_len <= IP_TOTAL_LEN_MAX));
+    buf += IP_TOTAL_LEN_TO_PROTOCOL_OFFSET;
+    packlen -= IP_TOTAL_LEN_TO_PROTOCOL_OFFSET;
+
+    // IP protocol
+    printf("IP protocol: %d\n", *buf);
+    assert(*buf == IP_TCP_PROTOCOL);
+    buf += IP_PROTOCOL_TO_SRC_OFFSET;
+    packlen -= IP_PROTOCOL_TO_SRC_OFFSET;
+
+    // IP source address
+    ip_src_addr = ctoi(buf, IP_SRC_SIZE, true);
+    printf("IP source address: 0x%x\n", ip_src_addr);
+    assert(ip_src_addr == 0xc0a80065 || ip_src_addr == 0xc01efc9a);
+    buf += IP_SRC_SIZE;
+    packlen -= IP_SRC_SIZE;
+
+    // IP destination address
+    ip_dest_addr = ctoi(buf, IP_DEST_SIZE, true);
+    printf("IP destination address: 0x%x\n", ip_dest_addr);
+    assert(ip_dest_addr == 0xc0a80065 || ip_dest_addr == 0xc01efc9a);
+    buf += IP_DEST_SIZE;
+    packlen -= IP_DEST_SIZE;
     printf("\n");
 
+    // Jump to the next packet
     buf += packlen;
-
     printf("\n");
   }
 
