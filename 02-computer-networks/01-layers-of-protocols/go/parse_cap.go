@@ -99,6 +99,7 @@ func main() {
 		check(err)
 
 		fmt.Printf("========== Packet %d ==========\n", count)
+
 		fmt.Printf("Captured length: %d bytes\n", ph.PacketLength)
 		fmt.Printf("Untruncated length: %d bytes\n\n", ph.FullPacketLength)
 
@@ -109,6 +110,7 @@ func main() {
 		check(err)
 
 		fmt.Println("========== Ethernet Headers ==========")
+
 		fmt.Printf("MAC destination: ")
 		printAddr(nh.EthMACDestination[:], "%x", ":")
 
@@ -128,6 +130,7 @@ func main() {
 		fmt.Println()
 
 		fmt.Println("========== IP Headers ==========")
+
 		ip_ver := nh.IPVersionAndHeaderLen >> 4
 		fmt.Printf("Version: %d\n", ip_ver)
 		if ip_ver != 4 {
@@ -146,15 +149,19 @@ func main() {
 
 		fmt.Printf("Source address: ")
 		printAddr(nh.IPSourceAddr[:], "%d", ".")
+
 		fmt.Printf("Destination address: ")
 		printAddr(nh.IPDestAddr[:], "%d", ".")
+
 		fmt.Println()
 
 		fmt.Println("========== TCP Headers ==========")
+
 		fmt.Printf("Source port: %d\n", nh.TCPSourcePort)
 		if nh.TCPSourcePort != 80 && nh.TCPSourcePort != 59295 {
 			log.Fatalf("TCP source port == <%d> want <80 || 5925>\n", nh.TCPSourcePort)
 		}
+
 		fmt.Printf("Destination port: %d\n", nh.TCPDestPort)
 		if nh.TCPDestPort != 80 && nh.TCPDestPort != 59295 {
 			log.Fatalf("TCP destination port == <%d> want <80 || 5925>\n", nh.TCPDestPort)
@@ -164,6 +171,7 @@ func main() {
 
 		tcp_data_offset := nh.TCPDataOffsetAndReserved >> 4
 		fmt.Printf("Data offset (header length): %d words (%d bytes)\n", tcp_data_offset, tcp_data_offset*4)
+
 		fmt.Println()
 		fmt.Println()
 
@@ -174,19 +182,8 @@ func main() {
 
 func check(e error) {
 	if e != nil {
-		log.Fatal("caught error")
+		log.Fatal("check caught error")
 	}
-}
-
-func ctoi(buf []byte) uint64 {
-	var ret uint64 = 0
-	shift := 0
-	size := len(buf)
-	for i := size - 1; i >= 0; i-- {
-		ret |= uint64(buf[i]) << shift
-		shift += 8
-	}
-	return ret
 }
 
 func printAddr(addr []byte, numFmt string, sep string) {
