@@ -9,32 +9,10 @@ import (
 )
 
 const (
-	FILE_HEADER_LEN     = 24
-	PACKET_HEADER_LEN   = 16
-	ETHERNET_HEADER_LEN = 14
-	IP_HEADER_LEN       = 20
-	TCP_HEADER_LEN      = 20
-
-	PACKLEN_SIZE                    = 4
-	FULL_PACKLEN_SIZE               = 4
-	MAC_DEST_SIZE                   = 6
-	MAC_SRC_SIZE                    = 6
-	ETHERTYPE_SIZE                  = 2
-	IPV4                            = 0x8
-	IPV6                            = 0xdd86
-	IP_TOTAL_LEN_OFFSET             = 2
-	IP_TOTAL_LEN_SIZE               = 2
-	IP_TOTAL_LEN_MIN                = 20
-	IP_TOTAL_LEN_MAX                = 65535
-	IP_TOTAL_LEN_TO_PROTOCOL_OFFSET = 7
-	IP_TCP_PROTOCOL                 = 6
-	IP_PROTOCOL_TO_SRC_OFFSET       = 3
-	IP_SRC_SIZE                     = 4
-	IP_DEST_SIZE                    = 4
-	TCP_SRC_PORT_SIZE               = 2
-	TCP_DEST_PORT_SIZE              = 2
-	TCP_SEQ_NUM_SIZE                = 4
-	TCP_SEQ_TO_DATA_OFFSET          = 8
+	FILE_HEADER_LEN   = 24
+	PACKET_HEADER_LEN = 16
+	IPV4              = 0x8
+	IPV6              = 0xdd86
 )
 
 type FileHeader struct {
@@ -45,44 +23,6 @@ type FileHeader struct {
 	_              [4]byte
 	SnapshotLength uint32
 	LinkLayerType  uint32
-}
-
-type PacketHeader struct {
-	_                [4]byte
-	_                [4]byte
-	PacketLength     uint32
-	FullPacketLength uint32
-}
-
-type EthernetHeader struct {
-	MACDestination [6]byte
-	MACSource      [6]byte
-	Ethertype      uint16
-}
-
-type IPHeader struct {
-	VersionAndHeaderLen byte
-	_                   byte
-	TotalLength         uint16
-	_                   [2]byte
-	_                   [2]byte
-	_                   byte
-	Protocol            byte
-	_                   [2]byte
-	SourceAddr          uint32
-	DestinationAddr     uint32
-}
-
-type TCPHeader struct {
-	SourcePort            uint16
-	DestinationPort       uint16
-	SequenceNum           uint32
-	AckNum                uint32
-	DataOffsetAndReserved byte
-	_                     byte
-	_                     [2]byte
-	_                     [2]byte
-	_                     [2]byte
 }
 
 type CombinedHeader struct {
@@ -106,30 +46,19 @@ type CombinedHeader struct {
 	_                   byte
 	Protocol            byte
 	_                   [2]byte
-	SourceAddr          uint32
-	DestinationAddr     uint32
+	SourceAddr          [4]byte
+	DestinationAddr     [4]byte
 
 	// TCP headers
-	SourcePort            uint16
-	DestinationPort       uint16
-	SequenceNum           uint32
-	AckNum                uint32
+	SourcePort            [2]byte
+	DestinationPort       [2]byte
+	SequenceNum           [4]byte
+	AckNum                [4]byte
 	DataOffsetAndReserved byte
 	_                     byte
 	_                     [2]byte
 	_                     [2]byte
 	_                     [2]byte
-}
-
-var headers = []struct {
-	header interface{}
-	size   uint8
-}{
-	// {FileHeader{}, FILE_HEADER_LEN},
-	{PacketHeader{}, PACKET_HEADER_LEN},
-	{EthernetHeader{}, ETHERNET_HEADER_LEN},
-	{IPHeader{}, IP_HEADER_LEN},
-	{TCPHeader{}, TCP_HEADER_LEN},
 }
 
 func main() {
@@ -166,8 +95,10 @@ func main() {
 		fmt.Println("========== Ethernet Headers ==========")
 		fmt.Printf("MAC destination: ")
 		printMACAddr(ch.MACDestination)
+
 		fmt.Printf("MAC source: ")
 		printMACAddr(ch.MACSource)
+
 		ethertype_str := ""
 		if ch.Ethertype == IPV4 {
 			ethertype_str = "IPv4"
@@ -176,20 +107,43 @@ func main() {
 		} else {
 			log.Fatal("Neither IPv4 nor IPv6")
 		}
+
 		fmt.Printf("Ethertype: %s\n", ethertype_str)
 		fmt.Println()
 
 		fmt.Println("========== IP Headers ==========")
 		ip_ver := ch.VersionAndHeaderLen >> 4
-		ip_header_len := ch.VersionAndHeaderLen & 0x0f
-		ip_total_len := getTotalLen(ch.TotalLength)
 		fmt.Printf("Version: %d\n", ip_ver)
+
+		ip_header_len := ch.VersionAndHeaderLen & 0x0f
 		fmt.Printf("Header length: %d words (%d bytes)\n", ip_header_len, ip_header_len*4)
+
+		ip_total_len := ctoi(ch.TotalLength[:])
 		fmt.Printf("Total length: %d bytes\n", ip_total_len)
-		fmt.Printf("Payload length: %d bytes\n", ip_total_len-uint16(ip_header_len)*4)
+		fmt.Printf("Payload length: %d bytes\n", ip_total_len-uint64(ip_header_len)*4)
+		fmt.Printf("Protocol: %d\n", ch.Protocol)
+
+		ip_src_addr := ctoi(ch.SourceAddr[:])
+		fmt.Printf("Source address: 0x%x\n", ip_src_addr)
+
+		ip_dest_addr := ctoi(ch.DestinationAddr[:])
+		fmt.Printf("Destination address: 0x%x\n", ip_dest_addr)
+		fmt.Println()
+
+		fmt.Println("========== TCP Headers ==========")
+		tcp_src_port := ctoi(ch.SourcePort[:])
+		fmt.Printf("Source port: %d\n", tcp_src_port)
+
+		tcp_dest_port := ctoi(ch.DestinationPort[:])
+		fmt.Printf("Destination port: %d\n", tcp_dest_port)
+
+		tcp_seq_num := ctoi(ch.SequenceNum[:])
+		fmt.Printf("Sequence number: %d\n", tcp_seq_num)
+
+		tcp_data_offset := ch.DataOffsetAndReserved >> 4
+		fmt.Printf("Data offset (header length): %d words (%d bytes)\n", tcp_data_offset, tcp_data_offset*4)
 		fmt.Println()
 		fmt.Println()
-		// fmt.Printf("Entire Header: %+v\n", ch)
 
 		i += int(uint32(PACKET_HEADER_LEN) + ch.PacketLength)
 	}
@@ -202,11 +156,12 @@ func check(e error) {
 	}
 }
 
-func getTotalLen(tl [2]byte) uint16 {
-	var shift uint8 = 0
-	var ret uint16 = 0
-	for i := 1; i >= 0; i-- {
-		ret |= uint16(tl[i] << shift)
+func ctoi(buf []byte) uint64 {
+	var ret uint64 = 0
+	shift := 0
+	size := len(buf)
+	for i := size - 1; i >= 0; i-- {
+		ret |= uint64(buf[i]) << shift
 		shift += 8
 	}
 	return ret
@@ -217,13 +172,4 @@ func printMACAddr(addr [6]byte) {
 		fmt.Printf("%x ", addr[i])
 	}
 	fmt.Println()
-}
-
-func readNextBytes(file *os.File, number int) []byte {
-	bytes := make([]byte, number)
-	_, err := file.Read(bytes)
-	if err != nil {
-		log.Fatal("error reading bytes from file")
-	}
-	return bytes
 }
