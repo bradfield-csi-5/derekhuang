@@ -98,7 +98,7 @@ func main() {
 		}
 		check(err)
 
-		fmt.Printf("========== Packet %d ==========\n", count)
+		fmt.Printf("==================== Packet %d ====================\n", count)
 
 		fmt.Printf("Captured length: %d bytes\n", ph.PacketLength)
 		fmt.Printf("Untruncated length: %d bytes\n\n", ph.FullPacketLength)
