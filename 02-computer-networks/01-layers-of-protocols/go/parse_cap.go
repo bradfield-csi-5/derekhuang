@@ -11,8 +11,9 @@ import (
 const (
 	FILE_HEADER_LEN   = 24
 	PACKET_HEADER_LEN = 16
-	IPV4              = 0x8
-	IPV6              = 0xdd86
+	IPV4              = 0x800
+	IPV6              = 0x86dd
+	IS_BIG_ENDIAN     = 0xd4c3b2a1
 )
 
 type FileHeader struct {
@@ -25,40 +26,41 @@ type FileHeader struct {
 	LinkLayerType  uint32
 }
 
-type CombinedHeader struct {
-	// Packet headers
+type PacketHeader struct {
 	_                [4]byte
 	_                [4]byte
 	PacketLength     uint32
 	FullPacketLength uint32
+}
 
+type NetworkHeaders struct {
 	// Ethernet headers
-	MACDestination [6]byte
-	MACSource      [6]byte
-	Ethertype      uint16
+	EthMACDestination [6]byte
+	EthMACSource      [6]byte
+	EthEthertype      uint16
 
 	// IP headers
-	VersionAndHeaderLen byte
-	_                   byte
-	TotalLength         [2]byte
-	_                   [2]byte
-	_                   [2]byte
-	_                   byte
-	Protocol            byte
-	_                   [2]byte
-	SourceAddr          [4]byte
-	DestinationAddr     [4]byte
+	IPVersionAndHeaderLen byte
+	_                     byte
+	IPTotalLength         uint16
+	_                     [2]byte
+	_                     [2]byte
+	_                     byte
+	IPProtocol            byte
+	_                     [2]byte
+	IPSourceAddr          [4]byte
+	IPDestAddr            [4]byte
 
 	// TCP headers
-	SourcePort            [2]byte
-	DestinationPort       [2]byte
-	SequenceNum           [4]byte
-	AckNum                [4]byte
-	DataOffsetAndReserved byte
-	_                     byte
-	_                     [2]byte
-	_                     [2]byte
-	_                     [2]byte
+	TCPSourcePort            uint16
+	TCPDestPort              uint16
+	TCPSeqNum                uint32
+	_                        [4]byte
+	TCPDataOffsetAndReserved byte
+	_                        byte
+	_                        [2]byte
+	_                        [2]byte
+	_                        [2]byte
 }
 
 func main() {
@@ -67,7 +69,7 @@ func main() {
 
 	fh := FileHeader{}
 	buf := bytes.NewBuffer(data)
-	err = binary.Read(buf, binary.LittleEndian, &fh)
+	err = binary.Read(buf, binary.NativeEndian, &fh)
 	check(err)
 
 	fmt.Println("========== File Header ==========")
@@ -77,32 +79,46 @@ func main() {
 	fmt.Printf("Snapshot Length: %d\n", fh.SnapshotLength)
 	fmt.Printf("Link Layer Type: %d\n\n", fh.LinkLayerType)
 
+	is_big_endian := fh.MagicNumber == IS_BIG_ENDIAN
+
 	count := 0
 	length := len(data)
 	for i := FILE_HEADER_LEN; i < length; {
 		count++
 
-		buf = bytes.NewBuffer(data[i:])
+		packet_buf := bytes.NewBuffer(data[i : i+PACKET_HEADER_LEN])
+		ph := PacketHeader{}
 
-		ch := CombinedHeader{}
-		err = binary.Read(buf, binary.LittleEndian, &ch)
+		// Use the Magic Number to determine byte ordering for the packet
+		// header only
+		if is_big_endian {
+			err = binary.Read(packet_buf, binary.BigEndian, &ph)
+		} else {
+			err = binary.Read(packet_buf, binary.LittleEndian, &ph)
+		}
 		check(err)
 
 		fmt.Printf("========== Packet %d ==========\n", count)
-		fmt.Printf("Captured length: %d bytes\n", ch.PacketLength)
-		fmt.Printf("Untruncated length: %d bytes\n\n", ch.FullPacketLength)
+		fmt.Printf("Captured length: %d bytes\n", ph.PacketLength)
+		fmt.Printf("Untruncated length: %d bytes\n\n", ph.FullPacketLength)
+
+		// Always use big endian for network headers
+		network_buf := bytes.NewBuffer(data[i+PACKET_HEADER_LEN:])
+		nh := NetworkHeaders{}
+		err = binary.Read(network_buf, binary.BigEndian, &nh)
+		check(err)
 
 		fmt.Println("========== Ethernet Headers ==========")
 		fmt.Printf("MAC destination: ")
-		printMACAddr(ch.MACDestination)
+		printAddr(nh.EthMACDestination[:], "%x", ":")
 
 		fmt.Printf("MAC source: ")
-		printMACAddr(ch.MACSource)
+		printAddr(nh.EthMACSource[:], "%x", ":")
 
 		ethertype_str := ""
-		if ch.Ethertype == IPV4 {
+		if nh.EthEthertype == IPV4 {
 			ethertype_str = "IPv4"
-		} else if ch.Ethertype == IPV6 {
+		} else if nh.EthEthertype == IPV6 {
 			ethertype_str = "IPv6"
 		} else {
 			log.Fatal("Neither IPv4 nor IPv6")
@@ -112,40 +128,46 @@ func main() {
 		fmt.Println()
 
 		fmt.Println("========== IP Headers ==========")
-		ip_ver := ch.VersionAndHeaderLen >> 4
+		ip_ver := nh.IPVersionAndHeaderLen >> 4
 		fmt.Printf("Version: %d\n", ip_ver)
+		if ip_ver != 4 {
+			log.Fatalf("IP version == <%d> want <4>\n", ip_ver)
+		}
 
-		ip_header_len := ch.VersionAndHeaderLen & 0x0f
+		ip_header_len := nh.IPVersionAndHeaderLen & 0x0f
 		fmt.Printf("Header length: %d words (%d bytes)\n", ip_header_len, ip_header_len*4)
 
-		ip_total_len := ctoi(ch.TotalLength[:])
-		fmt.Printf("Total length: %d bytes\n", ip_total_len)
-		fmt.Printf("Payload length: %d bytes\n", ip_total_len-uint64(ip_header_len)*4)
-		fmt.Printf("Protocol: %d\n", ch.Protocol)
+		fmt.Printf("Total length: %d bytes\n", nh.IPTotalLength)
+		fmt.Printf("Payload length: %d bytes\n", nh.IPTotalLength-uint16(ip_header_len)*4)
+		fmt.Printf("Protocol: %d\n", nh.IPProtocol)
+		if nh.IPProtocol != 6 {
+			log.Fatalf("IP protocol == <%d> want <6>\n", ip_ver)
+		}
 
-		ip_src_addr := ctoi(ch.SourceAddr[:])
-		fmt.Printf("Source address: 0x%x\n", ip_src_addr)
-
-		ip_dest_addr := ctoi(ch.DestinationAddr[:])
-		fmt.Printf("Destination address: 0x%x\n", ip_dest_addr)
+		fmt.Printf("Source address: ")
+		printAddr(nh.IPSourceAddr[:], "%d", ".")
+		fmt.Printf("Destination address: ")
+		printAddr(nh.IPDestAddr[:], "%d", ".")
 		fmt.Println()
 
 		fmt.Println("========== TCP Headers ==========")
-		tcp_src_port := ctoi(ch.SourcePort[:])
-		fmt.Printf("Source port: %d\n", tcp_src_port)
+		fmt.Printf("Source port: %d\n", nh.TCPSourcePort)
+		if nh.TCPSourcePort != 80 && nh.TCPSourcePort != 59295 {
+			log.Fatalf("TCP source port == <%d> want <80 || 5925>\n", nh.TCPSourcePort)
+		}
+		fmt.Printf("Destination port: %d\n", nh.TCPDestPort)
+		if nh.TCPDestPort != 80 && nh.TCPDestPort != 59295 {
+			log.Fatalf("TCP destination port == <%d> want <80 || 5925>\n", nh.TCPDestPort)
+		}
 
-		tcp_dest_port := ctoi(ch.DestinationPort[:])
-		fmt.Printf("Destination port: %d\n", tcp_dest_port)
+		fmt.Printf("Sequence number: %d\n", nh.TCPSeqNum)
 
-		tcp_seq_num := ctoi(ch.SequenceNum[:])
-		fmt.Printf("Sequence number: %d\n", tcp_seq_num)
-
-		tcp_data_offset := ch.DataOffsetAndReserved >> 4
+		tcp_data_offset := nh.TCPDataOffsetAndReserved >> 4
 		fmt.Printf("Data offset (header length): %d words (%d bytes)\n", tcp_data_offset, tcp_data_offset*4)
 		fmt.Println()
 		fmt.Println()
 
-		i += int(uint32(PACKET_HEADER_LEN) + ch.PacketLength)
+		i += int(uint32(PACKET_HEADER_LEN) + ph.PacketLength)
 	}
 	fmt.Printf("%d packets counted\n", count)
 }
@@ -167,9 +189,13 @@ func ctoi(buf []byte) uint64 {
 	return ret
 }
 
-func printMACAddr(addr [6]byte) {
-	for i := 0; i < 6; i++ {
-		fmt.Printf("%x ", addr[i])
+func printAddr(addr []byte, numFmt string, sep string) {
+	length := len(addr)
+	for i := 0; i < length; i++ {
+		fmt.Printf(numFmt, addr[i])
+		if i < length-1 {
+			fmt.Printf("%s", sep)
+		}
 	}
 	fmt.Println()
 }
