@@ -111,11 +111,11 @@ func main() {
 
 		fmt.Println("========== Ethernet Headers ==========")
 
-		fmt.Printf("MAC destination: ")
-		printAddr(nh.EthMACDestination[:], "%x", ":")
-
 		fmt.Printf("MAC source: ")
 		printAddr(nh.EthMACSource[:], "%x", ":")
+
+		fmt.Printf("MAC destination: ")
+		printAddr(nh.EthMACDestination[:], "%x", ":")
 
 		ethertype_str := ""
 		if nh.EthEthertype == IPV4 {
