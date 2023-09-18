@@ -76,7 +76,7 @@ int main(int argc, char **argv) {
   unsigned char *buf;
   long filelen;
 
-  if ((fp = fopen("net.cap", "r")) == NULL) {
+  if ((fp = fopen("../net.cap", "r")) == NULL) {
     perror("Error opening file");
     return 1;
   }
