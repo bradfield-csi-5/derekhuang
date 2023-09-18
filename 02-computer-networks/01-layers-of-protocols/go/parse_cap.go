@@ -1,19 +1,26 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"os"
+	"sort"
 )
 
 const (
-	FILE_HEADER_LEN   = 24
-	PACKET_HEADER_LEN = 16
-	IPV4              = 0x800
-	IPV6              = 0x86dd
-	IS_BIG_ENDIAN     = 0xd4c3b2a1
+	FILE_HEADER_LEN     = 24
+	PACKET_HEADER_LEN   = 16
+	ETHERNET_HEADER_LEN = 14
+	IPV4_HEADER_LEN     = 20
+	TCP_HEADER_LEN      = 20
+	IPV4                = 0x0800
+	IPV6                = 0x86dd
+	IS_BIG_ENDIAN       = 0xd4c3b2a1
 )
 
 type FileHeader struct {
@@ -63,6 +70,8 @@ type NetworkHeaders struct {
 	_                        [2]byte
 }
 
+type HTTPDataMap map[uint32][]byte
+
 func main() {
 	data, err := os.ReadFile("../net.cap")
 	check(err)
@@ -79,18 +88,17 @@ func main() {
 	fmt.Printf("Snapshot Length: %d\n", fh.SnapshotLength)
 	fmt.Printf("Link Layer Type: %d\n\n", fh.LinkLayerType)
 
-	is_big_endian := fh.MagicNumber == IS_BIG_ENDIAN
-
 	count := 0
-	length := len(data)
-	for i := FILE_HEADER_LEN; i < length; {
+	is_big_endian := fh.MagicNumber == IS_BIG_ENDIAN
+	httpResponses := make(HTTPDataMap)
+	httpRequests := make(HTTPDataMap)
+	for i := FILE_HEADER_LEN; i < len(data); {
 		count++
 
 		packet_buf := bytes.NewBuffer(data[i : i+PACKET_HEADER_LEN])
 		ph := PacketHeader{}
 
-		// Use the Magic Number to determine byte ordering for the packet
-		// header only
+		// Use the Magic Number to determine byte ordering for the packet header only
 		if is_big_endian {
 			err = binary.Read(packet_buf, binary.BigEndian, &ph)
 		} else {
@@ -102,6 +110,8 @@ func main() {
 
 		fmt.Printf("Captured length: %d bytes\n", ph.PacketLength)
 		fmt.Printf("Untruncated length: %d bytes\n\n", ph.FullPacketLength)
+
+		next_packet_start := int(uint32(PACKET_HEADER_LEN) + ph.PacketLength)
 
 		// Always use big endian for network headers
 		network_buf := bytes.NewBuffer(data[i+PACKET_HEADER_LEN:])
@@ -172,18 +182,93 @@ func main() {
 		tcp_data_offset := nh.TCPDataOffsetAndReserved >> 4
 		fmt.Printf("Data offset (header length): %d words (%d bytes)\n", tcp_data_offset, tcp_data_offset*4)
 
+		tcp_options_len := tcp_data_offset*4 - TCP_HEADER_LEN
+		fmt.Printf("Options length: %d bytes\n", tcp_options_len)
+
+		http_data_start := int(PACKET_HEADER_LEN + ETHERNET_HEADER_LEN + IPV4_HEADER_LEN + tcp_data_offset*4)
+		http_data_len := next_packet_start - http_data_start
+
+		fmt.Printf(
+			"HTTP data starts at byte %d and ends at byte %d\n",
+			http_data_start,
+			http_data_start+http_data_len,
+		)
+
+		if http_data_len > 0 {
+			http_data := make([]byte, http_data_len)
+			copy(http_data, data[i+http_data_start:i+http_data_start+http_data_len])
+
+			if nh.TCPSourcePort == 80 && nh.TCPDestPort == 59295 && http_data_len > 2 {
+				fmt.Printf("HTTP response data length: %d bytes\n", http_data_len)
+				if _, exists := httpResponses[nh.TCPSeqNum]; !exists {
+					httpResponses[nh.TCPSeqNum] = http_data
+				}
+			} else if nh.TCPSourcePort == 59295 && nh.TCPDestPort == 80 {
+				fmt.Printf("HTTP request data length: %d bytes\n", http_data_len)
+				if _, exists := httpRequests[nh.TCPSeqNum]; !exists {
+					httpRequests[nh.TCPSeqNum] = http_data
+				}
+			}
+		}
+
 		fmt.Println()
 		fmt.Println()
 
-		i += int(uint32(PACKET_HEADER_LEN) + ph.PacketLength)
+		i += next_packet_start
 	}
+
+	fmt.Printf("%d response packets stored\n", len(httpResponses))
+	fmt.Printf("%d request packets stored\n", len(httpRequests))
 	fmt.Printf("%d packets counted\n", count)
+
+	req, err := http.ReadRequest(bufio.NewReader(bytes.NewReader(getByteData(httpRequests))))
+	check(err)
+	fmt.Printf("Request: %v\n", req)
+
+	resp, err := http.ReadResponse(
+		bufio.NewReader(bytes.NewReader(getByteData(httpResponses))),
+		req,
+	)
+	check(err)
+	fmt.Printf("Response: %v\n", resp)
+	fmt.Printf("Resp.body: %v\n", resp.Body)
+
+	body, err := io.ReadAll(resp.Body)
+	check(err)
+	err = os.WriteFile("exercise.jpg", body, 0666)
+    check(err)
+}
+
+func getByteData(httpData HTTPDataMap) []byte {
+	var ret []byte
+	seqNums := make([]uint32, 0, len(httpData))
+	for sn := range httpData {
+		seqNums = append(seqNums, sn)
+	}
+	fmt.Printf("Sorted seq nums: %v\n", seqNums)
+	sort.Slice(seqNums, func(i, j int) bool { return seqNums[i] < seqNums[j] })
+	for _, sn := range seqNums {
+		ret = append(ret, httpData[sn]...)
+	}
+	return ret
 }
 
 func check(e error) {
 	if e != nil {
-		log.Fatal("check caught error")
+		log.Fatalf("check caught error: %v\n", e)
 	}
+}
+
+func compareByteSlice(b1 []byte, b2 []byte) bool {
+	if len(b1) != len(b2) {
+		return false
+	}
+	for i := 0; i < len(b1); i++ {
+		if b1[i] != b2[i] {
+			return false
+		}
+	}
+	return true
 }
 
 func printAddr(addr []byte, numFmt string, sep string) {
