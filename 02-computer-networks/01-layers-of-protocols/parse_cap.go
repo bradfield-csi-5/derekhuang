@@ -73,7 +73,7 @@ type NetworkHeaders struct {
 type HTTPDataMap map[uint32][]byte
 
 func main() {
-	data, err := os.ReadFile("../net.cap")
+	data, err := os.ReadFile("net.cap")
 	check(err)
 
 	fh := FileHeader{}
@@ -198,6 +198,7 @@ func main() {
 			http_data := make([]byte, http_data_len)
 			copy(http_data, data[i+http_data_start:i+http_data_start+http_data_len])
 
+			// Workaround for the two junk bytes at the beginning of the response
 			if nh.TCPSourcePort == 80 && nh.TCPDestPort == 59295 && http_data_len > 2 {
 				fmt.Printf("HTTP response data length: %d bytes\n", http_data_len)
 				if _, exists := httpResponses[nh.TCPSeqNum]; !exists {
@@ -236,20 +237,26 @@ func main() {
 	body, err := io.ReadAll(resp.Body)
 	check(err)
 	err = os.WriteFile("exercise.jpg", body, 0666)
-    check(err)
+	check(err)
 }
 
 func getByteData(httpData HTTPDataMap) []byte {
 	var ret []byte
+
+	// Collect sequence numbers
 	seqNums := make([]uint32, 0, len(httpData))
 	for sn := range httpData {
 		seqNums = append(seqNums, sn)
 	}
-	fmt.Printf("Sorted seq nums: %v\n", seqNums)
+
+	// Sort them
 	sort.Slice(seqNums, func(i, j int) bool { return seqNums[i] < seqNums[j] })
+
+	// Combine byte data from the map in order
 	for _, sn := range seqNums {
 		ret = append(ret, httpData[sn]...)
 	}
+
 	return ret
 }
 
@@ -257,18 +264,6 @@ func check(e error) {
 	if e != nil {
 		log.Fatalf("check caught error: %v\n", e)
 	}
-}
-
-func compareByteSlice(b1 []byte, b2 []byte) bool {
-	if len(b1) != len(b2) {
-		return false
-	}
-	for i := 0; i < len(b1); i++ {
-		if b1[i] != b2[i] {
-			return false
-		}
-	}
-	return true
 }
 
 func printAddr(addr []byte, numFmt string, sep string) {
