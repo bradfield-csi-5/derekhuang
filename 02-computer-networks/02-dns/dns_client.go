@@ -42,7 +42,7 @@ type DNSMessage struct {
 }
 
 func main() {
-	if len(os.Args) < 3 {
+	if len(os.Args) != 3 {
 		log.Fatal("Usage: go run dns_client.go [domain] [type]")
 	}
 
@@ -50,14 +50,13 @@ func main() {
 
 	gPubDNS := syscall.SockaddrInet4{Addr: [4]byte{8, 8, 8, 8}, Port: 53}
 
-	// Open socket
+	// open socket
 	sfd, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_DGRAM, 0)
 	if err != nil {
 		log.Fatal("Error opening socket: ", err)
 	}
-	// defer syscall.Close(sfd)
 
-	// Bind to any available port
+	// bind to any available port
 	err = syscall.Bind(sfd, &syscall.SockaddrInet4{Addr: [4]byte{0, 0, 0, 0}, Port: 0})
 	if err != nil {
 		log.Fatal("Error binding: ", err)
@@ -68,6 +67,7 @@ func main() {
 		log.Fatal("Error sendto: ", err)
 	}
 
+	// TODO: is 1024 large enough? solution uses 4096
 	buf := make([]byte, 1024)
 	for {
 		_, sockaddr, err := syscall.Recvfrom(sfd, buf, 0)
@@ -75,14 +75,14 @@ func main() {
 			log.Fatal("Error recvfrom: ", err)
 		}
 
-		// Expect ipv4
+		// expect ipv4
 		fromip4, ok := sockaddr.(*syscall.SockaddrInet4)
 		if !ok {
 			log.Printf("Not ok expecting ipv4\n")
 			continue
 		}
 
-		// Ignore responses from other hosts
+		// ignore responses from other hosts
 		if fromip4.Addr != gPubDNS.Addr || fromip4.Port != gPubDNS.Port {
 			log.Printf(
 				"Encountered response from an irrelevant host - Addr: %v Port: %d \n",
@@ -92,8 +92,8 @@ func main() {
 			continue
 		}
 
-		// Parse buf
-		log.Printf("Would parse buf here...\n")
+		// TODO: parse buf
+		log.Printf("Would parse buf...\n")
 	}
 }
 
