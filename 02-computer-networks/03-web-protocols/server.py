@@ -10,7 +10,7 @@ class JSONHeaderReporter(http.server.BaseHTTPRequestHandler):
     of the request headers.
     """
     def do_GET(self):
-        self.send_response(http.server.HTTPStatus.OK)
+        self.send_response(http.HTTPStatus.OK)
         body = json.dumps(dict(self.headers), indent=4).encode('utf8')
         self.send_header('Content-Length', str(len(body)))
         self.end_headers()
