@@ -133,6 +133,7 @@ func serialize(msg *DNSMessage) []byte {
 		// don't forget the terminating null byte
 		data = append(data, 0x00)
 		i++
+		// what are these four empty bytes for?
 		data = append(data, []byte{0, 0, 0, 0}...)
 		binary.BigEndian.PutUint16(data[i:], q.rtype)
 		i += 2
