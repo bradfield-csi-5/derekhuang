@@ -146,11 +146,11 @@ func Deserialize(data []byte) *DNSMessage {
 // list of labels. For instance, if "ns1.google.com" has been expressed
 // early, then "ns2.google.com" can be encoded as either:
 //
-//     ["ns2", "google", "com"]
+//	["ns2", "google", "com"]
 //
 // or:
 //
-//     ["ns2", <pointer to ["google", "com"]>].
+//	["ns2", <pointer to ["google", "com"]>].
 //
 // The labels themselves are Pascal strings: the first byte encodes the
 // length. Since each label must be 63 octets or less, the first two bits of
