@@ -75,7 +75,7 @@ func main() {
 			log.Fatal("Error recvfrom: ", err)
 		}
 
-		// expect ipv4
+		// cast the Sockaddr type to SockaddrInet4 to be able to compare Addr and Port
 		fromip4, ok := sockaddr.(*syscall.SockaddrInet4)
 		if !ok {
 			log.Printf("Not ok expecting ipv4\n")
