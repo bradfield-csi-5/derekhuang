@@ -12,7 +12,13 @@ class JSONHeaderReporter(http.server.BaseHTTPRequestHandler):
 
     def do_GET(self):
         self.send_response(http.HTTPStatus.OK)
-        body = json.dumps(dict(self.headers), indent=4).encode("utf8")
+        headers_dict = dict(self.headers)
+        if "Connection" not in headers_dict:
+            if isinstance(self, JSONHeaderReporterKeepalive):
+                headers_dict["Connection"] = "Keep-Alive"
+            else:
+                headers_dict["Connection"] = "close"
+        body = json.dumps(headers_dict, indent=4).encode("utf8")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
@@ -41,7 +47,10 @@ if __name__ == "__main__":
     parser.add_argument("--host", default="localhost", help='Local interface, default "localhost"')
     parser.add_argument("--port", default="9000", help="Port to listen on, default 9000")
     parser.add_argument(
-        "--keepalive", default=False, help="Run HTTP/1.1, so support persistent connections"
+        "--keepalive",
+        action="store_true",
+        default=False,
+        help="Run HTTP/1.1, so support persistent connections",
     )
     args = parser.parse_args()
     run_server(args.host, int(args.port), args.keepalive)

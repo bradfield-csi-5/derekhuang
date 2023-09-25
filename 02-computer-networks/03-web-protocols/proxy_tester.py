@@ -51,7 +51,7 @@ class HttpRequestTest(BaseTest):
                 {
                     "Accept-Encoding": "identity",
                     "Host": "localhost:8000",
-                    "User-Agent": "Python-urllib/3.6",
+                    "User-Agent": "Python-urllib/3.11",
                 },
             )
 
@@ -71,7 +71,7 @@ class KeepAliveTest(BaseTest):
                 {
                     "Accept-Encoding": "identity",
                     "Host": "localhost:8000",
-                    "User-Agent": "Python-urllib/3.6",
+                    "User-Agent": "Python-urllib/3.11",
                     "Connection": "Keep-Alive",
                 },
             )
