@@ -39,7 +39,16 @@ func main() {
 			return
 		}
 
-		err = syscall.Sendto(connfd, buf[:bytesRead], 0, connsa)
+		resp := "HTTP/1.1 200 OK\n"
+		resp += "Content-Length: %d\n"
+		resp += "Content-Type: text/plain\n\n%s"
+
+		err = syscall.Sendto(
+			connfd,
+			[]byte(fmt.Sprintf(resp, bytesRead, buf[:bytesRead])),
+			0,
+			connsa,
+		)
 		check(err)
 	}
 }
