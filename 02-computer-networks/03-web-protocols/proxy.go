@@ -20,13 +20,11 @@ func main() {
 	err = syscall.Bind(fd, &syscall.SockaddrInet4{Addr: [4]byte{0, 0, 0, 0}, Port: port})
 	check(err)
 
-	// listen
 	err = syscall.Listen(fd, 1)
 	check(err)
 
 	fmt.Printf("Listening on port %d\n", port)
 
-	// accept
 	buf := make([]byte, 2048)
 	for {
 		connfd, connsa, err := syscall.Accept(fd)
