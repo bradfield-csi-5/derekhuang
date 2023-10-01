@@ -12,13 +12,7 @@ class JSONHeaderReporter(http.server.BaseHTTPRequestHandler):
 
     def do_GET(self):
         self.send_response(http.HTTPStatus.OK)
-        headers_dict = dict(self.headers)
-        if "Connection" not in headers_dict:
-            if isinstance(self, JSONHeaderReporterKeepalive):
-                headers_dict["Connection"] = "Keep-Alive"
-            else:
-                headers_dict["Connection"] = "close"
-        body = json.dumps(headers_dict, indent=4).encode("utf8")
+        body = json.dumps(dict(self.headers), indent=4).encode("utf8")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
