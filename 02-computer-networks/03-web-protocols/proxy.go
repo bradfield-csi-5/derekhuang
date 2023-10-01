@@ -58,12 +58,14 @@ func main() {
 
 		cached, exists := cache[path]
 		if exists {
-			fmt.Println("Cache hit! Skipping server and responding...\n")
+			fmt.Printf("Cache hit! Skipping server request and responding...\n\n")
+
 			// send back
 			err = unix.Sendto(clientFd, cached, 0, nil)
 			check("error responding to client:", err)
 		} else {
 			fmt.Println("Cache miss. Fetching from server...")
+
 			// create a new socket for the server connection
 			serverSock, err := unix.Socket(unix.AF_INET, unix.SOCK_STREAM, 0)
 			check("error with opening socket to server:", err)
@@ -82,23 +84,24 @@ func main() {
 
 			// receive packets from the server
 			serverBuf := make([]byte, 4096)
+
+			// buffer for chunked data
+			buf := make([]byte, 0)
 			for {
 				n, _, err = unix.Recvfrom(serverSock, serverBuf, 0)
 				check("error recvfrom server:", err)
-				if n == 0 {
+				if n > 0 {
+					fmt.Printf("  -> received %d bytes from server\n", n)
+					buf = append(buf, serverBuf...)
+					err = unix.Sendto(clientFd, serverBuf, 0, nil)
+					check("error sending to client:", err)
+				} else {
 					fmt.Printf(
 						"    -> server finished sending. Inserting path '%s' into cache...\n\n",
 						path,
 					)
-					// cache[path] = buf
-					cache[path] = make([]byte, 4096)
-					copy(cache[path], serverBuf)
+					cache[path] = buf
 					break
-				} else {
-					fmt.Printf("  -> received %d bytes from server\n", n)
-					// buf = append(buf, serverBuf...)
-					err = unix.Sendto(clientFd, serverBuf, 0, nil)
-					check("error sending to client:", err)
 				}
 			}
 		}
