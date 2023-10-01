@@ -1,11 +1,11 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"log"
 	"strings"
-	"syscall"
+
+	"golang.org/x/sys/unix"
 )
 
 const (
@@ -22,105 +22,91 @@ type Request struct {
 }
 
 func main() {
-	// open public tcp socket
-	pubSock, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_STREAM, 0)
-	check(err)
-	defer syscall.Close(pubSock)
+	cache := make(map[string][]byte)
 
-	// bind to public port
-	err = syscall.Bind(
-		pubSock,
-		&syscall.SockaddrInet4{Addr: [4]byte{0, 0, 0, 0}, Port: publicPort},
+	fd, err := unix.Socket(unix.AF_INET, unix.SOCK_STREAM, 0)
+	check("error with opening socket to client:", err)
+	err = unix.Bind(
+		fd,
+		&unix.SockaddrInet4{Addr: [4]byte{0, 0, 0, 0}, Port: publicPort},
 	)
-	check(err)
-
-	// listen to public socket
-	err = syscall.Listen(pubSock, 1)
-	check(err)
+	check("error with Bind:", err)
+	err = unix.Listen(fd, 5)
+	check("error with Listen:", err)
 
 	fmt.Printf("Listening on public port %d\n", publicPort)
-
 	for {
-		// accept from public socket
-		fd, _, err := syscall.Accept(pubSock)
-		check(err)
-		go forward(fd)
-	}
-}
+		// accept from socket
+		clientFd, _, err := unix.Accept(fd)
+		check("error with Accept:", err)
+		defer unix.Close(fd)
 
-func forward(fd int) {
-	defer syscall.Close(fd)
-
-	// decode what was received from the public socket
-	for {
-		buf := make([]byte, 4096)
-
-		// receive from public socket
-		bytesRead, _, err := syscall.Recvfrom(fd, buf, 0)
-		check(err)
-
-		req := decode(buf[:bytesRead])
-		fmt.Printf("req.method: %s\n", req.method)
-		fmt.Printf("req.uri: %s\n", req.uri)
-		fmt.Printf("req.protocol: %s\n", req.protocol)
-		for k, v := range req.headers {
-			fmt.Printf("headers[%s]: %s\n", k, v)
+		// receive packet
+		clientBuf := make([]byte, 4096)
+		n, _, err := unix.Recvfrom(clientFd, clientBuf, 0)
+		check("error with Recvfrom:", err)
+		if n == 0 {
+			fmt.Printf("No bytes received from the client. Connection closed.\n")
+		} else {
+			fmt.Printf("Received %d bytes from client\n", n)
 		}
 
-		// TODO: make work
-		// // open server tcp socket
-		// serverSock, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_STREAM, 0)
-		// check(err)
-		// defer syscall.Close(serverSock)
-		//
-		// // bind to server port
-		// err = syscall.Bind(serverSock, &syscall.SockaddrInet4{Addr: [4]byte{0, 0, 0, 0}, Port: serverPort})
-		// check(err)
-		//
-		// // listen to server socket
-		// err = syscall.Listen(serverSock, 1)
-		// check(err)
-		//
-		// fmt.Printf("Listening on server port %d\n", serverPort)
-		//
-		// // accept from server socket
-		// _, servSa, err := syscall.Accept(serverSock)
-		// check(err)
-		//
-		// fmt.Printf("Sending %v to server\n", buf)
-		// // forward request to server
-		// resp := "HTTP/1.1 200 OK\n"
-		// resp += "Content-Length: %d\n"
-		// resp += "Content-Type: text/plain\n\n%s"
-		//
-		// err = syscall.Sendto(
-		// 	serverSock,
-		// 	[]byte(fmt.Sprintf(resp, pubBytesRead, pubBuf[:pubBytesRead])),
-		// 	0,
-		// 	servSa,
-		// )
-		// check(err)
+		// parse assuming the request is http
+		req := string(clientBuf)
+		parts := strings.Split(req, " ")
+		path := parts[1]
+
+		cached, exists := cache[path]
+		if exists {
+			fmt.Println("Cache hit! Skipping server and responding...\n")
+			// send back
+			err = unix.Sendto(clientFd, cached, 0, nil)
+			check("error responding to client:", err)
+		} else {
+			fmt.Println("Cache miss. Fetching from server...")
+			// create a new socket for the server connection
+			serverSock, err := unix.Socket(unix.AF_INET, unix.SOCK_STREAM, 0)
+			check("error with opening socket to server:", err)
+			defer unix.Close(serverSock)
+
+			// connect to the server port
+			err = unix.Connect(
+				serverSock,
+				&unix.SockaddrInet4{Addr: [4]byte{0, 0, 0, 0}, Port: serverPort},
+			)
+			check("error connecting with server:", err)
+
+			// send request to the server
+			err = unix.Sendto(serverSock, clientBuf, 0, nil)
+			check("error sending to server:", err)
+
+			// receive packets from the server
+			serverBuf := make([]byte, 4096)
+			for {
+				n, _, err = unix.Recvfrom(serverSock, serverBuf, 0)
+				check("error recvfrom server:", err)
+				if n == 0 {
+					fmt.Printf(
+						"    -> server finished sending. Inserting path '%s' into cache...\n\n",
+						path,
+					)
+					// cache[path] = buf
+					cache[path] = make([]byte, 4096)
+					copy(cache[path], serverBuf)
+					break
+				} else {
+					fmt.Printf("  -> received %d bytes from server\n", n)
+					// buf = append(buf, serverBuf...)
+					err = unix.Sendto(clientFd, serverBuf, 0, nil)
+					check("error sending to client:", err)
+				}
+			}
+		}
 	}
 }
 
-func decode(received []byte) *Request {
-	parts := bytes.SplitN(received, []byte{'\r', '\n', '\r', '\n'}, 2)
-	lines := bytes.Split(parts[0], []byte{'\n'})
-	first := bytes.Split(lines[0], []byte{' '})
-	var req Request
-	req.method = string(first[0])
-	req.uri = string(first[1])
-	req.protocol = string(first[2])
-	req.headers = make(map[string]string)
-	for i := 1; i < len(lines); i++ {
-		lineParts := strings.Split(string(lines[i]), ": ")
-		req.headers[strings.ToLower(string(lineParts[0]))] = strings.ToLower(string(lineParts[1]))
-	}
-	return &req
-}
-
-func check(e error) {
+func check(prefix string, e error) {
 	if e != nil {
-		log.Fatalln("check caught error:", e)
+		log.Fatalln(prefix, e)
 	}
 }
