@@ -1,8 +1,11 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
 	"log"
+	"net/http"
 	"strings"
 
 	"golang.org/x/sys/unix"
@@ -12,14 +15,6 @@ const (
 	publicPort = 8000
 	serverPort = 9000
 )
-
-type Request struct {
-	method   string
-	uri      string
-	protocol string
-	headers  map[string]string
-	body     []byte
-}
 
 func main() {
 	cache := make(map[string][]byte)
@@ -39,7 +34,7 @@ func main() {
 		// accept from socket
 		clientFd, _, err := unix.Accept(fd)
 		check("error with Accept:", err)
-		defer unix.Close(fd)
+		defer unix.Close(clientFd)
 
 		// receive packet
 		clientBuf := make([]byte, 4096)
@@ -51,12 +46,22 @@ func main() {
 			fmt.Printf("Received %d bytes from client\n", n)
 		}
 
-		// parse assuming the request is http
-		req := string(clientBuf)
-		parts := strings.Split(req, " ")
-		path := parts[1]
+		// parse with the assumption the request is http
+		// change connection to keep-alive before creating the http.Request
+		// since headers can't be updated on an existing request
+		// NOTE: the assumption this is a complete http request doesn't work
+		// for the concurrent test
+		clientReqStr := string(clientBuf[:n])
+		clientReqStr = strings.Replace(
+			clientReqStr,
+			"Connection: close",
+			"Connection: Keep-Alive",
+			1,
+		)
+		httpReq, err := parse([]byte(clientReqStr))
+		check("error parsing client req:", err)
 
-		cached, exists := cache[path]
+		cached, exists := cache[httpReq.URL.String()]
 		if exists {
 			fmt.Printf("Cache hit! Skipping server request and responding...\n\n")
 
@@ -79,33 +84,51 @@ func main() {
 			check("error connecting with server:", err)
 
 			// send request to the server
-			err = unix.Sendto(serverSock, clientBuf, 0, nil)
+			clientReq, err := encode(httpReq)
+			check("error encoding client request:", err)
+			err = unix.Sendto(serverSock, clientReq, 0, nil)
 			check("error sending to server:", err)
 
 			// receive packets from the server
 			serverBuf := make([]byte, 4096)
 
-			// buffer for chunked data
 			buf := make([]byte, 0)
 			for {
 				n, _, err = unix.Recvfrom(serverSock, serverBuf, 0)
 				check("error recvfrom server:", err)
 				if n > 0 {
 					fmt.Printf("  -> received %d bytes from server\n", n)
-					buf = append(buf, serverBuf...)
-					err = unix.Sendto(clientFd, serverBuf, 0, nil)
+					buf = append(buf, serverBuf[:n]...)
+					err = unix.Sendto(clientFd, serverBuf[:n], 0, nil)
 					check("error sending to client:", err)
 				} else {
 					fmt.Printf(
 						"    -> server finished sending. Inserting path '%s' into cache...\n\n",
-						path,
+						httpReq.URL.String(),
 					)
-					cache[path] = buf
+					cache[httpReq.URL.String()] = buf
 					break
 				}
 			}
 		}
 	}
+}
+
+func parse(reqBytes []byte) (*http.Request, error) {
+	req, err := http.ReadRequest(bufio.NewReader(bytes.NewReader(reqBytes)))
+	if err != nil {
+		return nil, err
+	}
+	return req, nil
+}
+
+func encode(req *http.Request) ([]byte, error) {
+	var buffer bytes.Buffer
+	err := req.Write(&buffer)
+	if err != nil {
+		return nil, err
+	}
+	return buffer.Bytes(), nil
 }
 
 func check(prefix string, e error) {
