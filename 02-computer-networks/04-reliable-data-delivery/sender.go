@@ -19,22 +19,26 @@ func main() {
 	}
 
 	proxyPort, err := strconv.Atoi(os.Args[1])
-	check("atoi:", err)
+	check(err)
 
-	// open a socket to the client (nc)
+	// open a socket to the proxy
 	fd, err := unix.Socket(unix.AF_INET, unix.SOCK_DGRAM, 0)
-	check("error with opening client socket:", err)
-	err = unix.Bind(
+	check(err)
+	// err = unix.Bind(
+	// 	fd,
+	// 	&unix.SockaddrInet4{Addr: [4]byte{0, 0, 0, 0}, Port: publicPort},
+	// )
+	// check("error binding to client port:", err)
+	err = unix.Connect(
 		fd,
-		&unix.SockaddrInet4{Addr: [4]byte{0, 0, 0, 0}, Port: publicPort},
+		&unix.SockaddrInet4{Addr: [4]byte{0, 0, 0, 0}, Port: proxyPort},
 	)
-	check("error binding to client port:", err)
 
 	fmt.Printf("Listening on port %d\n", publicPort)
 	for {
 		clientBuf := make([]byte, 64)
 		n, _, err := unix.Recvfrom(fd, clientBuf, 0)
-		check("error setting up recvfrom:", err)
+		check(err)
 		if n == 0 {
 			fmt.Printf("No bytes received. Connection Closed.\n")
 		} else {
@@ -43,21 +47,21 @@ func main() {
 
 		// connect with the proxy server
 		proxyFd, err := unix.Socket(unix.AF_INET, unix.SOCK_DGRAM, 0)
-		check("error with opening proxy socket:", err)
+		check(err)
 		err = unix.Connect(
 			proxyFd,
 			&unix.SockaddrInet4{Addr: [4]byte{0, 0, 0, 0}, Port: proxyPort},
 		)
-		check("error connecting to proxy:", err)
+		check(err)
 
 		err = unix.Sendto(proxyFd, clientBuf, 0, nil)
-		check("error sending to proxy:", err)
+		check(err)
 	}
 
 }
 
-func check(prefix string, e error) {
+func check(e error) {
 	if e != nil {
-		log.Fatalln(prefix, e)
+		panic(e)
 	}
 }
