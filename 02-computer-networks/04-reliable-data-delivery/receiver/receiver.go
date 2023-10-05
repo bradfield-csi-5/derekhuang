@@ -22,7 +22,7 @@ func main() {
 		buf := make([]byte, 4)
 		_, _, err := unix.Recvfrom(fd, buf, 0)
 		check(err)
-		fmt.Printf("Received: %v %s\n", buf, buf)
+		fmt.Printf("Received: %b %s\n", buf, buf)
 	}
 }
 
