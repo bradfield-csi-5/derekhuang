@@ -1,6 +1,5 @@
 import random
 import socket
-import sys
 
 DROP_RATE = 0.3
 CORRUPTION_RATE = 0.1
