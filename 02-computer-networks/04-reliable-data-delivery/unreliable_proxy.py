@@ -2,7 +2,7 @@ import random
 import socket
 
 DROP_RATE = 0.3
-CORRUPTION_RATE = 0.1
+CORRUPTION_RATE = 0.0
 
 
 if __name__ == "__main__":
