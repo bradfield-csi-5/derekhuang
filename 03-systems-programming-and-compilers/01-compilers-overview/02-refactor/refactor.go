@@ -40,12 +40,16 @@ func SortFunctions(src string) (string, error) {
 		x, xok := f.Decls[i].(*dst.FuncDecl)
 		y, yok := f.Decls[j].(*dst.FuncDecl)
 		if xok && !yok {
+			// if x is a func and y is not, x should come last
 			return false
 		} else if !xok && yok {
+			// if x is not a func and y is, y should come last
 			return true
 		} else if !xok && !yok {
+			// neither are funcs so there shouldn't be a swap
 			return false
 		}
+		// both are funcs; compare by name
 		return x.Name.Name < y.Name.Name
 	})
 	var buf bytes.Buffer
