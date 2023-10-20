@@ -49,14 +49,9 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	// fset := token.NewFileSet()
-	// err = ast.Print(fset, expr)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	res, err := Evaluate(expr)
+	fset := token.NewFileSet()
+	err = ast.Print(fset, expr)
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("Eval: %d\n", res)
 }
