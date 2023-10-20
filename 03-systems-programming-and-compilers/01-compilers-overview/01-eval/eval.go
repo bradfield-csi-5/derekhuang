@@ -10,17 +10,14 @@ import (
 )
 
 // Given an expression containing only int types, evaluate
-// the expressiron and return the result.
+// the expression and return the result.
 func Evaluate(expr ast.Expr) (int, error) {
 	switch v := expr.(type) {
 	case *ast.BasicLit:
 		switch v.Kind {
 		case token.INT:
 			i, err := strconv.Atoi(v.Value)
-			if err != nil {
-				return -1, err
-			}
-			return i, nil
+			return i, err
 		}
 	case *ast.BinaryExpr:
 		x, err := Evaluate(v.X)
