@@ -1,7 +1,7 @@
 package main
 
 import (
-	"errors"
+	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -17,14 +17,20 @@ func Evaluate(expr ast.Expr) (int, error) {
 		switch v.Kind {
 		case token.INT:
 			i, err := strconv.Atoi(v.Value)
-			check(err)
+			if err != nil {
+				return -1, err
+			}
 			return i, nil
 		}
 	case *ast.BinaryExpr:
 		x, err := Evaluate(v.X)
-		check(err)
+		if err != nil {
+			return -1, err
+		}
 		y, err := Evaluate(v.Y)
-		check(err)
+		if err != nil {
+			return -1, err
+		}
 		switch v.Op {
 		case token.ADD:
 			return x + y, nil
@@ -38,7 +44,7 @@ func Evaluate(expr ast.Expr) (int, error) {
 	case *ast.ParenExpr:
 		return Evaluate(v.X)
 	}
-	return 0, errors.New("Missing case for ast.Expr")
+	return -1, fmt.Errorf("Missing case for ast.Expr: %v\n", expr)
 }
 
 func main() {
@@ -56,10 +62,4 @@ func main() {
 		log.Fatal(err)
 	}
 	log.Printf("Eval: %d\n", res)
-}
-
-func check(e error) {
-	if e != nil {
-		log.Fatal(e)
-	}
 }
