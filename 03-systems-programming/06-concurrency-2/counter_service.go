@@ -2,6 +2,11 @@
 
 package counterservice
 
+import (
+	"sync"
+	"sync/atomic"
+)
+
 type CounterService interface {
 	// Returns values in ascending order; it should be safe to call
 	// getNext() concurrently from multiple goroutines without any
@@ -10,34 +15,39 @@ type CounterService interface {
 }
 
 type UnsynchronizedCounterService struct {
-	/* Please implement this struct and its getNext method */
+	count uint64
 }
 
 // getNext() - This one can be UNSAFE
 func (counter *UnsynchronizedCounterService) getNext() uint64 {
-	panic("getNext not implemented")
+	counter.count += 1
+	return counter.count
 }
 
 type AtomicCounterService struct {
-	/* Please implement this struct and its getNext method */
+	count atomic.Uint64
 }
 
 // getNext() with sync/atomic
 func (counter *AtomicCounterService) getNext() uint64 {
-	panic("getNext not implemented")
+	return counter.count.Add(1)
 }
 
 type MutexCounterService struct {
-	/* Please implement this struct and its getNext method */
+	count uint64
+	m     sync.Mutex
 }
 
 // getNext() with sync/Mutex
 func (counter *MutexCounterService) getNext() uint64 {
-	panic("getNext not implemented")
+	counter.m.Lock()
+	counter.count += 1
+	counter.m.Unlock()
+	return counter.count
 }
 
 type ChannelCounterService struct {
-	/* Please implement this struct and its getNext method */
+	count uint64
 }
 
 // A constructor for ChannelCounterService
