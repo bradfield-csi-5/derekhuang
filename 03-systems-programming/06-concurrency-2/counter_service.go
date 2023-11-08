@@ -20,7 +20,7 @@ type UnsynchronizedCounterService struct {
 
 // getNext() - This one can be UNSAFE
 func (counter *UnsynchronizedCounterService) getNext() uint64 {
-	counter.count += 1
+	counter.count++
 	return counter.count
 }
 
@@ -41,22 +41,34 @@ type MutexCounterService struct {
 // getNext() with sync/Mutex
 func (counter *MutexCounterService) getNext() uint64 {
 	counter.m.Lock()
-	counter.count += 1
-	counter.m.Unlock()
+	defer counter.m.Unlock()
+	counter.count++
 	return counter.count
 }
 
 type ChannelCounterService struct {
 	count uint64
+	req   chan struct{}
+	resp  chan uint64
 }
 
 // A constructor for ChannelCounterService
 func newChannelCounterService() *ChannelCounterService {
-	cs := ChannelCounterService{}
+	cs := ChannelCounterService{
+		req:  make(chan struct{}),
+		resp: make(chan uint64),
+	}
+	go func() {
+		for range cs.req {
+			cs.count++
+			cs.resp <- cs.count
+		}
+	}()
 	return &cs
 }
 
 // getNext() with goroutines and channels
 func (counter *ChannelCounterService) getNext() uint64 {
-	panic("getNext not implemented")
+	counter.req <- struct{}{}
+	return <-counter.resp
 }
